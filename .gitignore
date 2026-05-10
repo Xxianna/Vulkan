@@ -237,6 +237,11 @@ data/roboto*.*
 
 # Android Studio folders
 android/.idea/**
+android/examples/bin/
+android/examples/**/.cxx/
+android/examples/**/*.cxx
+android/examples/**/build/
+android/examples/**/liblibktx.a
 
 libs/vulkan/*.so
 
