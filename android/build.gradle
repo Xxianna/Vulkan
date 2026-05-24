@@ -23,14 +23,20 @@ allprojects {
         google()
         mavenCentral()
     }
-    // This code is where all the magic happens and fixes the error.
-    subprojects {
-        afterEvaluate { project ->
-            if (project.hasProperty('android')) {
-                project.android {
-                    if (namespace == null) {
-                        namespace "de.saschawillems." + project.group
-                    }
+}
+
+// Set NDK version for all Android modules
+subprojects {
+    plugins.withId('com.android.application') {
+        android {
+            ndkVersion rootProject.ext.ndkVersion
+            if (namespace == null) {
+                namespace "de.saschawillems." + project.name
+            }
+            // Sign release with debug keystore so APKs can be installed
+            buildTypes {
+                release {
+                    signingConfig signingConfigs.debug
                 }
             }
         }
@@ -40,8 +46,9 @@ allprojects {
 ext {
     abiFilters = "arm64-v8a"
     minSdkVersion = 21
-    targetSdkVersion = 26
-    compileSdkVersion = 26
+    targetSdkVersion = 33
+    compileSdkVersion = 33
+    ndkVersion = "30.0.14904198"
     shaderPath = '../../../shaders/'
     assetPath = '../../../assets/'
 }
