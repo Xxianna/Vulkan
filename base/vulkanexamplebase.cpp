@@ -8,6 +8,11 @@
 
 #include "vulkanexamplebase.h"
 
+#if defined(_WIN32)
+#include <imm.h>
+#pragma comment(lib, "imm32.lib")
+#endif
+
 #if defined(VK_EXAMPLE_XCODE_GENERATED)
 #if (defined(VK_USE_PLATFORM_MACOS_MVK) || defined(VK_USE_PLATFORM_METAL_EXT))
 #include <Cocoa/Cocoa.h>
@@ -1262,6 +1267,47 @@ HWND VulkanExampleBase::setupWindow(HINSTANCE hinstance, WNDPROC wndproc)
 	SetForegroundWindow(window);
 	SetFocus(window);
 
+	// Register for touch input (references SDL touch event support)
+	RegisterTouchWindow(window, 0);
+
+	// Initialize unified input handler
+	inputHandler.platform_window = (void*)window;
+	inputHandler.onMouseMove = [this](float x, float y) {
+		// Existing mouseState update is handled by handleMouseMove in WM_MOUSEMOVE
+	};
+	inputHandler.onMouseButtonDown = [this](int button) {
+		// Existing mouseState.buttons update is handled in WM_LBUTTONDOWN etc.
+	};
+	inputHandler.onMouseButtonUp = [this](int button) {
+		// Existing mouseState.buttons update is handled in WM_LBUTTONUP etc.
+	};
+	inputHandler.onMouseWheel = [this](float dx, float dy) {
+		// Existing camera zoom is handled in WM_MOUSEWHEEL
+	};
+	inputHandler.onMouseLeave = [this]() {
+		mouseLeave();
+	};
+	inputHandler.onKeyDown = [this](int key, int mod) {
+		// Existing keyPressed() is called from WM_KEYDOWN with native VK code
+	};
+	inputHandler.onKeyUp = [this](int key, int mod) {
+	};
+	inputHandler.onTextInput = [this](const std::string& text) {
+		textInput(text);
+	};
+	inputHandler.onTouchEvent = [this](int action, const std::vector<vks::TouchPoint>& touches) {
+		touchEvent(action, touches);
+	};
+	inputHandler.onResize = [this](int w, int h) {
+		// Existing resize is handled in WM_SIZE
+	};
+	inputHandler.onDpiChanged = [this](float scale) {
+		dpiChanged(scale);
+	};
+	inputHandler.onImeComposition = [this](const std::string& text) {
+		imeComposition(text);
+	};
+
 	return window;
 }
 
@@ -1318,6 +1364,8 @@ void VulkanExampleBase::handleMessages(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 		}
 
 		keyPressed((uint32_t)wParam);
+		// Feed unified input handler (references SDL KEYDOWN)
+		inputHandler.ProcessKeyDown(vks::InputHandler::ConvertKeyCode(wParam, lParam), vks::InputHandler::GetModifierState());
 		break;
 	case WM_KEYUP:
 		if (camera.type == Camera::firstperson)
@@ -1338,36 +1386,54 @@ void VulkanExampleBase::handleMessages(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 				break;
 			}
 		}
+		// Feed unified input handler (references SDL KEYUP)
+		inputHandler.ProcessKeyUp(vks::InputHandler::ConvertKeyCode(wParam, lParam), vks::InputHandler::GetModifierState());
 		break;
 	case WM_LBUTTONDOWN:
 		mouseState.position = glm::vec2((float)LOWORD(lParam), (float)HIWORD(lParam));
 		mouseState.buttons.left = true;
+		inputHandler.ProcessMouseButtonDown(vks::MOUSE_LEFT);
+		SetCapture(hWnd);
 		break;
 	case WM_RBUTTONDOWN:
 		mouseState.position = glm::vec2((float)LOWORD(lParam), (float)HIWORD(lParam));
 		mouseState.buttons.right = true;
+		inputHandler.ProcessMouseButtonDown(vks::MOUSE_RIGHT);
+		SetCapture(hWnd);
 		break;
 	case WM_MBUTTONDOWN:
 		mouseState.position = glm::vec2((float)LOWORD(lParam), (float)HIWORD(lParam));
 		mouseState.buttons.middle = true;
+		inputHandler.ProcessMouseButtonDown(vks::MOUSE_MIDDLE);
+		SetCapture(hWnd);
 		break;
 	case WM_LBUTTONUP:
 		mouseState.buttons.left = false;
+		inputHandler.ProcessMouseButtonUp(vks::MOUSE_LEFT);
+		ReleaseCapture();
 		break;
 	case WM_RBUTTONUP:
 		mouseState.buttons.right = false;
+		inputHandler.ProcessMouseButtonUp(vks::MOUSE_RIGHT);
+		ReleaseCapture();
 		break;
 	case WM_MBUTTONUP:
 		mouseState.buttons.middle = false;
+		inputHandler.ProcessMouseButtonUp(vks::MOUSE_MIDDLE);
+		ReleaseCapture();
 		break;
 	case WM_MOUSEWHEEL:
 	{
 		short wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 		camera.translate(glm::vec3(0.0f, 0.0f, (float)wheelDelta * 0.005f));
+		inputHandler.ProcessMouseWheel(0.0f, (float)wheelDelta);
 		break;
 	}
 	case WM_MOUSEMOVE:
 	{
+		// Enable mouse leave tracking (references SDL WINDOWEVENT_LEAVE)
+		TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT), TME_LEAVE, hWnd, 0 };
+		TrackMouseEvent(&tme);
 		handleMouseMove(LOWORD(lParam), HIWORD(lParam));
 		break;
 	}
@@ -1395,6 +1461,137 @@ void VulkanExampleBase::handleMessages(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 	case WM_EXITSIZEMOVE:
 		resizing = false;
 		break;
+
+	// === Extended input handling (references SDL platform layer patterns) ===
+
+	case WM_CHAR:
+	{
+		// Text input (references SDL TEXTINPUT)
+		if (wParam >= 32) { // Filter control characters
+			wchar_t wc = (wchar_t)wParam;
+			char utf8[4];
+			int len = WideCharToMultiByte(CP_UTF8, 0, &wc, 1, utf8, sizeof(utf8), NULL, NULL);
+			if (len > 0) {
+				std::string text(utf8, len);
+				inputHandler.ProcessTextInput(text);
+			}
+		}
+		break;
+	}
+	case WM_MOUSEHWHEEL:
+	{
+		// Horizontal mouse wheel (references SDL MOUSEWHEEL x-axis)
+		short wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+		inputHandler.ProcessMouseWheel(0.0f, (float)wheelDelta);
+		break;
+	}
+	case WM_MOUSELEAVE:
+	{
+		// Mouse leave window (references SDL WINDOWEVENT_LEAVE)
+		inputHandler.ProcessMouseLeave();
+		break;
+	}
+	case WM_TOUCH:
+	{
+		// Multi-touch input (references SDL FINGERDOWN/UP/MOTION)
+		UINT numInputs = LOWORD(wParam);
+		TOUCHINPUT* touchInputs = new TOUCHINPUT[numInputs];
+		if (GetTouchInputInfo((HTOUCHINPUT)lParam, numInputs, touchInputs, sizeof(TOUCHINPUT))) {
+			std::vector<vks::TouchPoint> touches;
+			int action = -1;
+			for (UINT i = 0; i < numInputs; i++) {
+				vks::TouchPoint tp;
+				tp.id = touchInputs[i].dwID;
+				// Convert touch coordinates to client coordinates
+				POINT pt;
+				pt.x = TOUCH_COORD_TO_PIXEL(touchInputs[i].x) / 100;
+				pt.y = TOUCH_COORD_TO_PIXEL(touchInputs[i].y) / 100;
+				ScreenToClient(hWnd, &pt);
+				tp.x = (float)pt.x;
+				tp.y = (float)pt.y;
+				touches.push_back(tp);
+
+				if (touchInputs[i].dwFlags & TOUCHEVENTF_DOWN) action = 0;
+				else if (touchInputs[i].dwFlags & TOUCHEVENTF_MOVE) action = 1;
+				else if (touchInputs[i].dwFlags & TOUCHEVENTF_UP) action = 2;
+			}
+			if (action >= 0 && !touches.empty()) {
+				if (action == 0) inputHandler.ProcessTouchStart(touches);
+				else if (action == 1) inputHandler.ProcessTouchMove(touches);
+				else if (action == 2) inputHandler.ProcessTouchEnd(touches);
+			}
+			CloseTouchInputHandle((HTOUCHINPUT)lParam);
+		}
+		delete[] touchInputs;
+		break;
+	}
+	case WM_DPICHANGED:
+	{
+		// DPI change (references SDL DISPLAY_SCALE_CHANGED)
+		UINT dpi = LOWORD(wParam);
+		float scale = (float)dpi / 96.0f;
+		inputHandler.ProcessDpiChanged(scale);
+
+		// Resize window to match new DPI
+		RECT* rect = (RECT*)lParam;
+		SetWindowPos(hWnd,
+			nullptr,
+			rect->left, rect->top,
+			rect->right - rect->left, rect->bottom - rect->top,
+			SWP_NOZORDER | SWP_NOACTIVATE);
+		break;
+	}
+	case WM_IME_STARTCOMPOSITION:
+	{
+		// IME composition started
+		inputHandler.ProcessImeComposition("", 0, 0);
+		break;
+	}
+	case WM_IME_COMPOSITION:
+	{
+		// IME composition in progress
+		if (lParam & GCS_RESULTSTR) {
+			// Commit final string
+			HIMC himc = ImmGetContext(hWnd);
+			if (himc) {
+				LONG len = ImmGetCompositionStringW(himc, GCS_RESULTSTR, nullptr, 0);
+				if (len > 0) {
+					std::wstring wstr(len / sizeof(wchar_t), L'\0');
+					ImmGetCompositionStringW(himc, GCS_RESULTSTR, &wstr[0], len);
+					char utf8[1024];
+					int ulen = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), utf8, sizeof(utf8), NULL, NULL);
+					if (ulen > 0) {
+						inputHandler.ProcessImeCommit(std::string(utf8, ulen));
+					}
+				}
+				ImmReleaseContext(hWnd, himc);
+			}
+		}
+		else if (lParam & GCS_COMPSTR) {
+			// Update composition string
+			HIMC himc = ImmGetContext(hWnd);
+			if (himc) {
+				LONG len = ImmGetCompositionStringW(himc, GCS_COMPSTR, nullptr, 0);
+				if (len > 0) {
+					std::wstring wstr(len / sizeof(wchar_t), L'\0');
+					ImmGetCompositionStringW(himc, GCS_COMPSTR, &wstr[0], len);
+					char utf8[1024];
+					int ulen = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (int)wstr.size(), utf8, sizeof(utf8), NULL, NULL);
+					if (ulen > 0) {
+						inputHandler.ProcessImeComposition(std::string(utf8, ulen), 0, (int)wstr.size());
+					}
+				}
+				ImmReleaseContext(hWnd, himc);
+			}
+		}
+		break;
+	}
+	case WM_IME_ENDCOMPOSITION:
+	{
+		// IME composition ended
+		inputHandler.ProcessImeEnd();
+		break;
+	}
 	}
 
 	OnHandleMessage(hWnd, uMsg, wParam, lParam);
@@ -1441,6 +1638,18 @@ int32_t VulkanExampleBase::handleAppInput(struct android_app* app, AInputEvent* 
 							}
 						};
 
+						// Feed unified touch input (references SDL FINGERUP)
+						{
+							std::vector<vks::TouchPoint> touches;
+							vks::TouchPoint tp;
+							tp.id = AMotionEvent_getPointerId(event, 0);
+							tp.x = AMotionEvent_getX(event, 0);
+							tp.y = AMotionEvent_getY(event, 0);
+							touches.push_back(tp);
+							vulkanExample->inputHandler.ProcessTouchEnd(touches);
+							vulkanExample->touchEvent(2, touches);
+						}
+
 						return 1;
 						break;
 					}
@@ -1463,6 +1672,17 @@ int32_t VulkanExampleBase::handleAppInput(struct android_app* app, AInputEvent* 
 						vulkanExample->touchPos.y = AMotionEvent_getY(event, 0);
 						vulkanExample->mouseState.position.x = AMotionEvent_getX(event, 0);
 						vulkanExample->mouseState.position.y = AMotionEvent_getY(event, 0);
+						// Feed unified touch input (references SDL FINGERDOWN)
+						{
+							std::vector<vks::TouchPoint> touches;
+							vks::TouchPoint tp;
+							tp.id = AMotionEvent_getPointerId(event, 0);
+							tp.x = AMotionEvent_getX(event, 0);
+							tp.y = AMotionEvent_getY(event, 0);
+							touches.push_back(tp);
+							vulkanExample->inputHandler.ProcessTouchStart(touches);
+							vulkanExample->touchEvent(0, touches);
+						}
 						break;
 					}
 					case AMOTION_EVENT_ACTION_MOVE: {
@@ -1484,6 +1704,40 @@ int32_t VulkanExampleBase::handleAppInput(struct android_app* app, AInputEvent* 
 							vulkanExample->touchPos.x = eventX;
 							vulkanExample->touchPos.y = eventY;
 						}
+						// Feed unified touch input (references SDL FINGERMOTION)
+						{
+							std::vector<vks::TouchPoint> touches;
+							int32_t pointerCount = AMotionEvent_getPointerCount(event);
+							for (int32_t i = 0; i < pointerCount; i++) {
+								vks::TouchPoint tp;
+								tp.id = AMotionEvent_getPointerId(event, i);
+								tp.x = AMotionEvent_getX(event, i);
+								tp.y = AMotionEvent_getY(event, i);
+								touches.push_back(tp);
+							}
+							vulkanExample->inputHandler.ProcessTouchMove(touches);
+							vulkanExample->touchEvent(1, touches);
+						}
+						break;
+					}
+					case AMOTION_EVENT_ACTION_POINTER_DOWN:
+					case AMOTION_EVENT_ACTION_POINTER_UP: {
+						// Multi-touch pointer added/removed (references SDL FINGERDOWN/UP for additional pointers)
+						int32_t action = AMotionEvent_getAction(event);
+						int32_t pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+						std::vector<vks::TouchPoint> touches;
+						vks::TouchPoint tp;
+						tp.id = AMotionEvent_getPointerId(event, pointerIndex);
+						tp.x = AMotionEvent_getX(event, pointerIndex);
+						tp.y = AMotionEvent_getY(event, pointerIndex);
+						touches.push_back(tp);
+						if ((action & AMOTION_EVENT_ACTION_MASK) == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+							vulkanExample->inputHandler.ProcessTouchStart(touches);
+							vulkanExample->touchEvent(0, touches);
+						} else {
+							vulkanExample->inputHandler.ProcessTouchEnd(touches);
+							vulkanExample->touchEvent(2, touches);
+						}
 						break;
 					}
 					default:
@@ -1502,7 +1756,18 @@ int32_t VulkanExampleBase::handleAppInput(struct android_app* app, AInputEvent* 
 		int32_t action = AKeyEvent_getAction((const AInputEvent*)event);
 
 		if (action == AKEY_EVENT_ACTION_UP)
+		{
+			// Feed unified input handler for key up (references SDL KEYUP)
+			vulkanExample->inputHandler.ProcessKeyUp(vks::InputHandler::ConvertKeyCode(keyCode), 0);
 			return 0;
+		}
+
+		// Feed unified input handler for key down (references SDL KEYDOWN)
+		int mods = 0;
+		if (AKeyEvent_getMetaState(event) & AMETA_SHIFT_ON) mods |= vks::KM_SHIFT;
+		if (AKeyEvent_getMetaState(event) & AMETA_CTRL_ON) mods |= vks::KM_CTRL;
+		if (AKeyEvent_getMetaState(event) & AMETA_ALT_ON) mods |= vks::KM_ALT;
+		vulkanExample->inputHandler.ProcessKeyDown(vks::InputHandler::ConvertKeyCode(keyCode), mods);
 
 		switch (keyCode)
 		{
@@ -1672,7 +1937,7 @@ static CVReturn displayLinkOutputCallback(CVDisplayLinkRef displayLink, const CV
 	return kCVReturnSuccess;
 }
 
-@interface View : NSView<NSWindowDelegate>
+@interface View : NSView<NSWindowDelegate, NSTextInputClient>
 {
 @public
 	VulkanExampleBase *vulkanExample;
@@ -1703,6 +1968,11 @@ static CVReturn displayLinkOutputCallback(CVDisplayLinkRef displayLink, const CV
 	//     - vsync command line option (-vs) on macOS now works like other platforms (using VK_PRESENT_MODE_FIFO_KHR)
 	//CVDisplayLinkSetOutputCallback(displayLink, &displayLinkOutputCallback, vulkanExample);
 	CVDisplayLinkStart(displayLink);
+
+	// Add tracking area for mouse enter/leave (references SDL WINDOWEVENT_LEAVE)
+	NSTrackingAreaOptions options = NSTrackingMouseEnteredAndExited | NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect;
+	NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect options:options owner:self userInfo:nil];
+	[self addTrackingArea:trackingArea];
 }
 
 - (BOOL)acceptsFirstResponder
@@ -1746,6 +2016,13 @@ static CVReturn displayLinkOutputCallback(CVDisplayLinkRef displayLink, const CV
 			vulkanExample->keyPressed(event.keyCode);	// handle example-specific key press events
 			break;
 	}
+	// Feed unified input handler (references SDL KEYDOWN)
+	int mods = 0;
+	if (event.modifierFlags & NSEventModifierFlagShift) mods |= vks::KM_SHIFT;
+	if (event.modifierFlags & NSEventModifierFlagControl) mods |= vks::KM_CTRL;
+	if (event.modifierFlags & NSEventModifierFlagOption) mods |= vks::KM_ALT;
+	if (event.modifierFlags & NSEventModifierFlagCommand) mods |= vks::KM_SUPER;
+	vulkanExample->inputHandler.ProcessKeyDown(vks::InputHandler::ConvertKeyCode(event.keyCode), mods);
 }
 
 - (void)keyUp:(NSEvent*)event
@@ -1767,6 +2044,13 @@ static CVReturn displayLinkOutputCallback(CVDisplayLinkRef displayLink, const CV
 		default:
 			break;
 	}
+	// Feed unified input handler (references SDL KEYUP)
+	int mods = 0;
+	if (event.modifierFlags & NSEventModifierFlagShift) mods |= vks::KM_SHIFT;
+	if (event.modifierFlags & NSEventModifierFlagControl) mods |= vks::KM_CTRL;
+	if (event.modifierFlags & NSEventModifierFlagOption) mods |= vks::KM_ALT;
+	if (event.modifierFlags & NSEventModifierFlagCommand) mods |= vks::KM_SUPER;
+	vulkanExample->inputHandler.ProcessKeyUp(vks::InputHandler::ConvertKeyCode(event.keyCode), mods);
 }
 
 - (NSPoint)getMouseLocalPoint:(NSEvent*)event
@@ -1782,11 +2066,13 @@ static CVReturn displayLinkOutputCallback(CVDisplayLinkRef displayLink, const CV
 	auto point = [self getMouseLocalPoint:event];
 	vulkanExample->mouseState.position = glm::vec2(point.x, point.y);
 	vulkanExample->mouseState.buttons.left = true;
+	vulkanExample->inputHandler.ProcessMouseButtonDown(vks::MOUSE_LEFT);
 }
 
 - (void)mouseUp:(NSEvent *)event
 {
 	vulkanExample->mouseState.buttons.left = false;
+	vulkanExample->inputHandler.ProcessMouseButtonUp(vks::MOUSE_LEFT);
 }
 
 - (void)rightMouseDown:(NSEvent *)event
@@ -1794,11 +2080,13 @@ static CVReturn displayLinkOutputCallback(CVDisplayLinkRef displayLink, const CV
 	auto point = [self getMouseLocalPoint:event];
 	vulkanExample->mouseState.position = glm::vec2(point.x, point.y);
 	vulkanExample->mouseState.buttons.right = true;
+	vulkanExample->inputHandler.ProcessMouseButtonDown(vks::MOUSE_RIGHT);
 }
 
 - (void)rightMouseUp:(NSEvent *)event
 {
 	vulkanExample->mouseState.buttons.right = false;
+	vulkanExample->inputHandler.ProcessMouseButtonUp(vks::MOUSE_RIGHT);
 }
 
 - (void)otherMouseDown:(NSEvent *)event
@@ -1806,11 +2094,13 @@ static CVReturn displayLinkOutputCallback(CVDisplayLinkRef displayLink, const CV
 	auto point = [self getMouseLocalPoint:event];
 	vulkanExample->mouseState.position = glm::vec2(point.x, point.y);
 	vulkanExample->mouseState.buttons.middle = true;
+	vulkanExample->inputHandler.ProcessMouseButtonDown(vks::MOUSE_MIDDLE);
 }
 
 - (void)otherMouseUp:(NSEvent *)event
 {
 	vulkanExample->mouseState.buttons.middle = false;
+	vulkanExample->inputHandler.ProcessMouseButtonUp(vks::MOUSE_MIDDLE);
 }
 
 - (void)mouseDragged:(NSEvent *)event
@@ -1842,6 +2132,109 @@ static CVReturn displayLinkOutputCallback(CVDisplayLinkRef displayLink, const CV
 	short wheelDelta = [event deltaY];
 	vulkanExample->camera.translate(glm::vec3(0.0f, 0.0f,
 		-(float)wheelDelta * 0.05f * vulkanExample->camera.movementSpeed));
+	// Horizontal scroll (references SDL MOUSEWHEEL x-axis)
+	float deltaX = [event deltaX];
+	vulkanExample->inputHandler.ProcessMouseWheel(deltaX, (float)wheelDelta);
+}
+
+// === Text input (references SDL TEXTINPUT + TEXTEDITING) ===
+
+- (void)insertText:(id)string
+{
+	NSString *text = [string isKindOfClass:[NSAttributedString class]] ? [string string] : (NSString *)string;
+	vulkanExample->inputHandler.ProcessTextInput(text.UTF8String);
+}
+
+- (void)setMarkedText:(id)string selectedRange:(NSRange)selectedRange replacementRange:(NSRange)replacementRange
+{
+	NSString *text = [string isKindOfClass:[NSAttributedString class]] ? [string string] : (NSString *)string;
+	if (text.length > 0) {
+		vulkanExample->inputHandler.ProcessImeComposition(text.UTF8String, (int)selectedRange.location, (int)selectedRange.length);
+	} else {
+		vulkanExample->inputHandler.ProcessImeEnd();
+	}
+}
+
+- (void)unmarkText
+{
+	vulkanExample->inputHandler.ProcessImeEnd();
+}
+
+- (NSRange)selectedRange
+{
+	return NSMakeRange(NSNotFound, 0);
+}
+
+- (NSRange)markedRange
+{
+	return NSMakeRange(NSNotFound, 0);
+}
+
+- (BOOL)hasMarkedText
+{
+	return vulkanExample->inputHandler.GetImeState().composing;
+}
+
+- (NSArray *)validAttributesForMarkedText
+{
+	return @[];
+}
+
+- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range actualRange:(NSRangePointer)actualRange
+{
+	return nil;
+}
+
+- (NSUInteger)characterIndexForPoint:(NSPoint)point
+{
+	return NSNotFound;
+}
+
+- (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(NSRangePointer)actualRange
+{
+	return NSZeroRect;
+}
+
+- (void)doCommandBySelector:(SEL)selector
+{
+	// Let the system handle standard editing commands
+}
+
+// === Clipboard (references SDL SetClipboardText/GetClipboardText) ===
+
+- (void)copy:(id)sender
+{
+	// Override in examples to provide copy content
+}
+
+- (void)paste:(id)sender
+{
+	NSString *text = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
+	if (text) {
+		vulkanExample->inputHandler.ProcessTextInput(text.UTF8String);
+	}
+}
+
+// === DPI change (references SDL DISPLAY_SCALE_CHANGED) ===
+
+- (void)viewDidChangeBackingProperties
+{
+	CGFloat scale = self.window.backingScaleFactor;
+	vulkanExample->inputHandler.ProcessDpiChanged((float)scale);
+	vulkanExample->dpiChanged((float)scale);
+}
+
+// === Mouse tracking (references SDL WINDOWEVENT_LEAVE) ===
+
+- (void)mouseExited:(NSEvent *)event
+{
+	vulkanExample->inputHandler.ProcessMouseLeave();
+	vulkanExample->mouseLeave();
+}
+
+- (void)mouseEntered:(NSEvent *)event
+{
+	// mouse inside window
 }
 
 - (void)windowWillEnterFullScreen:(NSNotification *)notification
@@ -2191,6 +2584,11 @@ void VulkanExampleBase::pointerButton(struct wl_pointer *pointer, uint32_t seria
 	default:
 		break;
 	}
+	// Unified input (references SDL MOUSEBUTTONDOWN/UP)
+	if (state)
+		inputHandler.ProcessMouseButtonDown(button == BTN_LEFT ? 0 : button == BTN_RIGHT ? 1 : 2);
+	else
+		inputHandler.ProcessMouseButtonUp(button == BTN_LEFT ? 0 : button == BTN_RIGHT ? 1 : 2);
 }
 
 /*static*/void VulkanExampleBase::pointerAxisCb(void *data, wl_pointer *pointer, uint32_t time, uint32_t axis, wl_fixed_t value)
@@ -2206,6 +2604,12 @@ void VulkanExampleBase::pointerAxis(wl_pointer *pointer, uint32_t time, uint32_t
 	{
 	case REL_X:
 		camera.translate(glm::vec3(0.0f, 0.0f, d * 0.005f));
+		// Unified input: vertical scroll (references SDL MOUSEWHEEL y-axis)
+		inputHandler.ProcessMouseWheel(0.0f, (float)d);
+		break;
+	case REL_Y:
+		// Unified input: horizontal scroll (references SDL MOUSEWHEEL x-axis)
+		inputHandler.ProcessMouseWheel((float)d, 0.0f);
 		break;
 	default:
 		break;
@@ -2262,6 +2666,12 @@ void VulkanExampleBase::keyboardKey(struct wl_keyboard *keyboard, uint32_t seria
 
 	if (state)
 		keyPressed(key);
+
+	// Feed unified input handler (references SDL KEYDOWN/KEYUP)
+	if (state)
+		inputHandler.ProcessKeyDown(vks::InputHandler::ConvertKeyCode(key), 0);
+	else
+		inputHandler.ProcessKeyUp(vks::InputHandler::ConvertKeyCode(key), 0);
 }
 
 /*static*/void VulkanExampleBase::keyboardModifiersCb(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group)
@@ -2578,6 +2988,14 @@ void VulkanExampleBase::handleEvent(const xcb_generic_event_t *event)
 			mouseState.buttons.middle = true;
 		if (press->detail == XCB_BUTTON_INDEX_3)
 			mouseState.buttons.right = true;
+		// Unified input: mouse buttons (references SDL MOUSEBUTTONDOWN)
+		if (press->detail <= XCB_BUTTON_INDEX_3)
+			inputHandler.ProcessMouseButtonDown(press->detail - 1);
+		// Scroll wheel: buttons 4=up, 5=down, 6=left, 7=right (references SDL MOUSEWHEEL)
+		if (press->detail == 4) inputHandler.ProcessMouseWheel(0.0f, 1.0f);
+		if (press->detail == 5) inputHandler.ProcessMouseWheel(0.0f, -1.0f);
+		if (press->detail == 6) inputHandler.ProcessMouseWheel(-1.0f, 0.0f);
+		if (press->detail == 7) inputHandler.ProcessMouseWheel(1.0f, 0.0f);
 	}
 	break;
 	case XCB_BUTTON_RELEASE:
@@ -2589,6 +3007,9 @@ void VulkanExampleBase::handleEvent(const xcb_generic_event_t *event)
 			mouseState.buttons.middle = false;
 		if (press->detail == XCB_BUTTON_INDEX_3)
 			mouseState.buttons.right = false;
+		// Unified input: mouse buttons (references SDL MOUSEBUTTONUP)
+		if (press->detail <= XCB_BUTTON_INDEX_3)
+			inputHandler.ProcessMouseButtonUp(press->detail - 1);
 	}
 	break;
 	case XCB_KEY_PRESS:
@@ -2615,6 +3036,8 @@ void VulkanExampleBase::handleEvent(const xcb_generic_event_t *event)
 				ui.visible = !ui.visible;
 				break;
 		}
+		// Feed unified input handler (references SDL KEYDOWN)
+		inputHandler.ProcessKeyDown(vks::InputHandler::ConvertKeyCode(keyEvent->detail), 0);
 	}
 	break;
 	case XCB_KEY_RELEASE:
@@ -2639,6 +3062,8 @@ void VulkanExampleBase::handleEvent(const xcb_generic_event_t *event)
 				break;
 		}
 		keyPressed(keyEvent->detail);
+		// Feed unified input handler (references SDL KEYUP)
+		inputHandler.ProcessKeyUp(vks::InputHandler::ConvertKeyCode(keyEvent->detail), 0);
 	}
 	break;
 	case XCB_DESTROY_NOTIFY:

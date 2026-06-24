@@ -8,6 +8,10 @@
 
 #pragma once
 
+// InputHandler must be included before windows.h to avoid macro conflicts
+// (windows.h defines DELETE, ERROR, etc. that clash with enum values)
+#include "InputHandler.h"
+
 #ifdef _WIN32
 #pragma comment(linker, "/subsystem:windows")
 #include <windows.h>
@@ -198,6 +202,9 @@ public:
 		} buttons;
 		glm::vec2 position;
 	} mouseState;
+
+	/** @brief Unified input handler (extends input capabilities without replacing existing mouseState/camera flow) */
+	vks::InputHandler inputHandler;
 
 	VkClearColorValue defaultClearColor = { { 0.025f, 0.025f, 0.025f, 1.0f } };
 
@@ -396,6 +403,21 @@ public:
 #if defined(_WIN32)
 	virtual void OnHandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 #endif
+
+	// === Extended input callbacks (default empty, override in examples) ===
+	// These reference the SDL platform layer's input event patterns.
+	// Existing examples are unaffected — default implementations are no-ops.
+
+	/** @brief Called when text input is received (e.g. from keyboard or IME commit) */
+	virtual void textInput(const std::string& text) {}
+	/** @brief Called on touch events. action: 0=start, 1=move, 2=end */
+	virtual void touchEvent(int action, const std::vector<vks::TouchPoint>& touches) {}
+	/** @brief Called when the mouse cursor leaves the window */
+	virtual void mouseLeave() {}
+	/** @brief Called when the display DPI/scale factor changes */
+	virtual void dpiChanged(float scale) {}
+	/** @brief Called during IME composition (text is in-progress, not yet committed) */
+	virtual void imeComposition(const std::string& text) {}
 };
 
 #include "Entrypoints.h"

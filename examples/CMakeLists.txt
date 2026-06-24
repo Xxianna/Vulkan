@@ -128,6 +128,7 @@ set(EXAMPLES
 	inlineuniformblocks
 	inputattachments
 	instancing
+	inputevents
 	meshshader
 	multisampling
 	multisamplingalphatocoverage
