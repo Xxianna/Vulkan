@@ -8,7 +8,7 @@
 #include <RmlUi/Core/FileInterface.h>
 
 // Forward declarations to avoid including VulkanDevice.h (which includes vulkan/vulkan.h)
-namespace vks { class VulkanDevice; }
+namespace vks { struct VulkanDevice; }
 
 namespace vks
 {
@@ -57,6 +57,10 @@ namespace vks
 		bool wantsCaptureMouse() const;
 		bool wantsCaptureKeyboard() const;
 
+		// Read a pixel from the offscreen texture. Returns RGBA.
+		// Uses a staging buffer for CPU readback.
+		void readOffscreenPixel(int x, int y, uint8_t* rgba);
+
 		Rml::Context* getContext() const { return context; }
 
 		static Rml::Input::KeyIdentifier convertKey(int keyCode);
@@ -69,6 +73,15 @@ namespace vks
 		Rml::UniquePtr<RmlUiFileInterface> file_interface;
 
 		VmaAllocator vma_allocator{ VK_NULL_HANDLE };
+		VkDevice vk_device{ VK_NULL_HANDLE };
+		VkQueue vk_queue{ VK_NULL_HANDLE };
+
+		// Staging buffer for offscreen texture readback
+		VkBuffer staging_buffer{ VK_NULL_HANDLE };
+		VmaAllocation staging_allocation{ VK_NULL_HANDLE };
+		void* staging_mapped{ nullptr };
+		uint32_t staging_width{ 0 };
+		uint32_t staging_height{ 0 };
 
 		int rmlui_width{ 0 };
 		int rmlui_height{ 0 };

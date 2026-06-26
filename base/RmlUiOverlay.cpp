@@ -86,6 +86,9 @@ namespace vks
 		allocator_info.pVulkanFunctions = &vulkanFunctions;
 		vmaCreateAllocator(&allocator_info, &vma_allocator);
 
+		vk_device = vulkanDevice->logicalDevice;
+		vk_queue = graphicsQueue;
+
 		// Set up file interface (like Shell in bim example) - must be before Rml::Initialise()
 		file_interface = Rml::MakeUnique<RmlUiFileInterface>("E:/prj/bim_ntv/Vulkan/examples/gltfloading_rmlui/data/");
 		Rml::SetFileInterface(file_interface.get());
@@ -125,6 +128,109 @@ namespace vks
 		printf("[RmlUiOverlay] Initialized successfully (%dx%d)\n", width, height);
 	}
 
+	void RmlUiOverlay::readOffscreenPixel(int x, int y, uint8_t* rgba)
+	{
+		rgba[0] = rgba[1] = rgba[2] = rgba[3] = 0;
+		if (!vk_device || !vk_queue) return;
+
+		VkImage offscreen_image = render_interface.GetOffscreenImage();
+		if (!offscreen_image) return;
+
+		uint32_t w = (uint32_t)rmlui_width;
+		uint32_t h = (uint32_t)rmlui_height;
+		if (x < 0 || x >= (int)w || y < 0 || y >= (int)h) return;
+
+		// Create/recreate staging buffer if size changed
+		if (staging_width != w || staging_height != h) {
+			if (staging_buffer) {
+				vmaUnmapMemory(vma_allocator, staging_allocation);
+				vmaDestroyBuffer(vma_allocator, staging_buffer, staging_allocation);
+			}
+			VkBufferCreateInfo buf_info = {};
+			buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			buf_info.size = w * h * 4;
+			buf_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			VmaAllocationCreateInfo alloc_info = {};
+			alloc_info.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+			vmaCreateBuffer(vma_allocator, &buf_info, &alloc_info, &staging_buffer, &staging_allocation, nullptr);
+			vmaMapMemory(vma_allocator, staging_allocation, &staging_mapped);
+			staging_width = w;
+			staging_height = h;
+		}
+
+		// Create a temporary command buffer
+		VkCommandPoolCreateInfo pool_info = {};
+		pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+		VkCommandPool cmd_pool;
+		vkCreateCommandPool(vk_device, &pool_info, nullptr, &cmd_pool);
+
+		VkCommandBufferAllocateInfo alloc_info = {};
+		alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		alloc_info.commandPool = cmd_pool;
+		alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		alloc_info.commandBufferCount = 1;
+		VkCommandBuffer cmd;
+		vkAllocateCommandBuffers(vk_device, &alloc_info, &cmd);
+
+		VkCommandBufferBeginInfo begin_info = {};
+		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		vkBeginCommandBuffer(cmd, &begin_info);
+
+		// Transition offscreen image to TRANSFER_SRC
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = offscreen_image;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.layerCount = 1;
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+		// Copy image to staging buffer
+		VkBufferImageCopy region = {};
+		region.bufferOffset = 0;
+		region.bufferRowLength = w;
+		region.bufferImageHeight = h;
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.layerCount = 1;
+		region.imageExtent = {w, h, 1};
+		vkCmdCopyImageToBuffer(cmd, offscreen_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging_buffer, 1, &region);
+
+		// Transition back
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+		vkEndCommandBuffer(cmd);
+
+		VkSubmitInfo submit_info = {};
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = &cmd;
+		vkQueueSubmit(vk_queue, 1, &submit_info, VK_NULL_HANDLE);
+		vkQueueWaitIdle(vk_queue);
+
+		// Read pixel (RGBA8, origin top-left)
+		const uint8_t* pixels = (const uint8_t*)staging_mapped;
+		int idx = (y * w + x) * 4;
+		rgba[0] = pixels[idx];
+		rgba[1] = pixels[idx + 1];
+		rgba[2] = pixels[idx + 2];
+		rgba[3] = pixels[idx + 3];
+
+		vkFreeCommandBuffers(vk_device, cmd_pool, 1, &cmd);
+		vkDestroyCommandPool(vk_device, cmd_pool, nullptr);
+	}
+
 	void RmlUiOverlay::freeResources()
 	{
 		if (context)
@@ -143,6 +249,13 @@ namespace vks
 
 		Rml::Shutdown();
 		file_interface.reset();
+
+		if (staging_buffer) {
+			vmaUnmapMemory(vma_allocator, staging_allocation);
+			vmaDestroyBuffer(vma_allocator, staging_buffer, staging_allocation);
+			staging_buffer = VK_NULL_HANDLE;
+			staging_mapped = nullptr;
+		}
 	}
 
 	void RmlUiOverlay::update()

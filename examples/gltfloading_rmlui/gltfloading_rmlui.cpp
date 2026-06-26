@@ -253,6 +253,7 @@ class VulkanExample : public VulkanExampleBase
 {
 public:
 	bool wireframe = false;
+	bool rmlui_passthrough = false;  // true = mouse events pass through to 3D viewport
 	VulkanglTFModel glTFModel;
 
 	struct UniformData {
@@ -534,9 +535,10 @@ public:
 		VulkanExampleBase::submitFrame();
 	}
 
-	// Input forwarding to RmlUi
+	// Input forwarding to RmlUi with passthrough support
 	virtual void mouseMoved(double x, double y, bool &handled)
 	{
+		if (rmlui_passthrough) return;  // passthrough: don't send to RmlUi
 		rmluiOverlay.processMouseMove((float)x, (float)y);
 		if (rmluiOverlay.wantsCaptureMouse()) handled = true;
 	}
@@ -551,14 +553,32 @@ public:
 	virtual void OnHandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override
 	{
 		switch (uMsg) {
-		case WM_LBUTTONDOWN: case WM_RBUTTONDOWN: case WM_MBUTTONDOWN:
-			rmluiOverlay.processMouseButton(uMsg == WM_LBUTTONDOWN ? 0 : (uMsg == WM_RBUTTONDOWN ? 1 : 2), true); break;
+		case WM_LBUTTONDOWN: case WM_RBUTTONDOWN: case WM_MBUTTONDOWN: {
+			int mx = (short)LOWORD(lParam);
+			int my = (short)HIWORD(lParam);
+			// Read offscreen pixel to decide passthrough
+			uint8_t rgba[4];
+			rmluiOverlay.readOffscreenPixel(mx, my, rgba);
+			if (rgba[3] < 10) {
+				// Transparent area: passthrough to 3D viewport
+				rmlui_passthrough = true;
+			} else {
+				rmlui_passthrough = false;
+				rmluiOverlay.processMouseButton(uMsg == WM_LBUTTONDOWN ? 0 : (uMsg == WM_RBUTTONDOWN ? 1 : 2), true);
+			}
+			break;
+		}
 		case WM_LBUTTONUP: case WM_RBUTTONUP: case WM_MBUTTONUP:
+			rmlui_passthrough = false;
 			rmluiOverlay.processMouseButton(uMsg == WM_LBUTTONUP ? 0 : (uMsg == WM_RBUTTONUP ? 1 : 2), false); break;
+		case WM_MOUSELEAVE:
+			rmlui_passthrough = false; break;
 		case WM_MOUSEWHEEL:
-			rmluiOverlay.processMouseWheel((float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA); break;
+			if (!rmlui_passthrough)
+				rmluiOverlay.processMouseWheel((float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA); break;
 		case WM_CHAR:
-			rmluiOverlay.processTextInput((Rml::Character)wParam); break;
+			if (!rmlui_passthrough)
+				rmluiOverlay.processTextInput((Rml::Character)wParam); break;
 		case WM_KEYUP: {
 			Rml::Input::KeyIdentifier rmlKey = vks::RmlUiOverlay::convertKey((int)wParam);
 			if (rmlKey != Rml::Input::KI_UNKNOWN)
