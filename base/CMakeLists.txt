@@ -4,6 +4,9 @@
 file(GLOB BASE_SRC "*.cpp" "*.hpp" "*.h" "../external/imgui/*.cpp")
 file(GLOB BASE_HEADERS "*.hpp" "*.h")
 
+# RmlUi Vulkan renderer backend (offscreen rendering support)
+set(RMLUI_VK_RENDERER_SRC "../external/RmlUi/Backends/RmlUi_Renderer_VK.cpp")
+
 set(KTX_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../external/ktx)
 set(KTX_SOURCES
     ${KTX_DIR}/lib/texture.c
@@ -26,7 +29,7 @@ source_group("Shaders\\HLSL" FILES ${SHADERS_HLSL})
 source_group("Shaders\\SLANG" FILES ${SHADERS_SLANG})
 message(STATUS ${SHADERS_GLSL})
 
-add_library(base STATIC ${BASE_SRC} ${KTX_SOURCES} ${SHADERS_GLSL} ${SHADERS_HLSL} ${SHADERS_SLANG})
+add_library(base STATIC ${BASE_SRC} ${RMLUI_VK_RENDERER_SRC} ${KTX_SOURCES} ${SHADERS_GLSL} ${SHADERS_HLSL} ${SHADERS_SLANG})
 if(WIN32)
     target_link_libraries(base ${Vulkan_LIBRARY} ${WINLIBS} rmlui_core rmlui_debugger)
  else(WIN32)

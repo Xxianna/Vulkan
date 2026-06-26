@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rml>
+<head>
+	<title>BIM glTF Viewer</title>
+	<link type="text/rcss" href="E:/prj/bim_ntv/Vulkan/external/RmlUi/Samples/assets/rml.rcss"/>
+	<link type="text/rcss" href="overlay.rcss"/>
+</head>
+<body>
+
+<div id="title_bar">
+	<span id="title_text">glTF Model Viewer</span>
+	<span id="title_dropdown">&#9660;</span>
+</div>
+
+<div id="menu_bar">
+	<div class="menu_item">规划</div>
+	<div class="menu_item active">建筑</div>
+	<div class="menu_item">家居</div>
+	<div class="menu_item">结构</div>
+	<div class="menu_item">给排水</div>
+	<div class="menu_item">消防</div>
+	<div class="menu_item">电气</div>
+	<div class="menu_item">空调</div>
+	<div class="menu_item">监测</div>
+	<div class="menu_item">运维</div>
+</div>
+
+<div id="toolbar_row1">
+	<div class="toolbar_btn">项目库</div>
+	<div class="toolbar_btn">用户</div>
+	<div class="toolbar_btn">参照</div>
+	<div class="toolbar_btn">组</div>
+	<div class="toolbar_btn">构件</div>
+	<div class="toolbar_separator"></div>
+	<div class="toolbar_btn">创建</div>
+	<div class="toolbar_btn">编辑</div>
+	<div class="toolbar_btn">渲染</div>
+	<div class="toolbar_btn">标注</div>
+	<div class="toolbar_btn">定位</div>
+	<div class="toolbar_separator"></div>
+	<div class="toolbar_btn">梁</div>
+	<div class="toolbar_btn">柱</div>
+	<div class="toolbar_btn">屋面板</div>
+	<div class="toolbar_btn">楼板</div>
+	<div class="toolbar_btn">墙</div>
+	<div class="toolbar_btn">门</div>
+	<div class="toolbar_btn">窗</div>
+</div>
+
+<div id="toolbar_row2">
+	<div class="tool_btn_small">组列表</div>
+	<div class="tool_btn_small">添加子组</div>
+	<div class="tool_btn_small">添加构件</div>
+	<div class="tool_btn_small">解除构件</div>
+	<div class="tool_btn_small">一键选取</div>
+	<div class="tool_btn_small">重命名</div>
+	<div class="tool_btn_small">设定视图</div>
+	<div class="tool_btn_small">轻量化</div>
+	<div class="tool_btn_small">删除</div>
+</div>
+
+<div id="left_panel">
+	<div class="tree_header">&#128269; 默认组</div>
+	<div class="tree_search"><input type="text" placeholder="搜索..."/></div>
+	<div class="tree_node selected">默认组</div>
+	<div class="tree_node tree_indent">&#9660; 子组</div>
+	<div class="tree_node tree_indent2">构件 III</div>
+	<div class="tree_node">未分组构件</div>
+</div>
+
+<!-- viewport is transparent - glTF model shows through -->
+<div id="viewport">
+</div>
+
+<div id="right_tools">
+	<div class="right_tool_icon">&#9995;</div>
+	<div class="right_tool_icon">&#8617;</div>
+	<div class="right_tool_icon">&#128269;+</div>
+	<div class="right_tool_icon">&#128269;-</div>
+	<div class="right_tool_icon">&#9723;</div>
+	<div class="right_tool_icon">&#9776;</div>
+</div>
+
+<div id="status_bar">
+	<div id="command_input"><input type="text" placeholder="键入命令"/></div>
+	<div class="status_item">mm</div>
+	<div class="status_coords">X=0.000, Y=0.000, Z=0.000</div>
+</div>
+
+</body>
+</rml>

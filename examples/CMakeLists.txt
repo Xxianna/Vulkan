@@ -118,6 +118,7 @@ set(EXAMPLES
 	gears
 	geometryshader
 	gltfloading
+	gltfloading_rmlui
 	gltfscenerendering
 	gltfskinning
 	graphicspipelinelibrary

@@ -1,0 +1,243 @@
+body {
+	font-family: "HarmonyOS Sans SC";
+	font-size: 13dp;
+	color: #333;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background-color: transparent;
+}
+
+#title_bar {
+	position: absolute;
+	top: 0; left: 0; right: 0;
+	height: 28dp;
+	background-color: rgba(240,240,240,230);
+	border-bottom: 1dp #ccc;
+	z-index: 100;
+}
+#title_text {
+	display: inline-block;
+	font-size: 14dp;
+	font-weight: bold;
+	color: #333;
+	padding: 6dp 10dp 0;
+}
+#title_dropdown {
+	display: inline-block;
+	font-size: 10dp;
+	color: #666;
+	padding: 8dp 5dp 0;
+	cursor: pointer;
+}
+
+#menu_bar {
+	position: absolute;
+	top: 28dp; left: 0; right: 0;
+	height: 26dp;
+	background-color: rgba(255,255,255,230);
+	border-bottom: 1dp #ddd;
+	z-index: 99;
+}
+.menu_item {
+	display: inline-block;
+	padding: 6dp 12dp 0;
+	font-size: 13dp;
+	color: #333;
+	cursor: pointer;
+}
+.menu_item:hover {
+	background-color: #e6f0fa;
+	color: #0066cc;
+}
+.menu_item.active {
+	background-color: #d0e4f7;
+	color: #0066cc;
+	font-weight: bold;
+}
+
+#toolbar_row1 {
+	position: absolute;
+	top: 54dp; left: 0; right: 0;
+	height: 50dp;
+	background-color: rgba(248,248,248,230);
+	border-bottom: 1dp #ddd;
+	z-index: 98;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: center;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+.toolbar_btn {
+	display: inline-block;
+	padding: 3dp 5dp 2dp;
+	margin: 2dp 1dp;
+	font-size: 11dp;
+	color: #444;
+	background-color: rgba(238,238,238,230);
+	border: 1dp #ccc;
+	cursor: pointer;
+	vertical-align: top;
+	text-align: center;
+	min-width: 30dp;
+}
+.toolbar_btn:hover {
+	background-color: #dde8f0;
+	border-color: #aac;
+	color: #0066cc;
+}
+.toolbar_btn:active {
+	background-color: #c0d4e8;
+	border-color: #88a;
+}
+.toolbar_separator {
+	flex: 0 0 auto;
+	display: inline-block;
+	width: 1dp;
+	height: 20dp;
+	background-color: #ccc;
+	margin: 6dp 4dp 0;
+}
+
+#toolbar_row2 {
+	position: absolute;
+	top: 104dp; left: 0; right: 0;
+	height: 30dp;
+	background-color: rgba(240,240,240,230);
+	border-bottom: 1dp #ddd;
+	z-index: 97;
+	overflow: hidden;
+}
+.tool_btn_small {
+	display: inline-block;
+	padding: 4dp 6dp 0;
+	margin: 2dp 1dp;
+	font-size: 11dp;
+	color: #555;
+	background-color: rgba(232,232,232,230);
+	border: 1dp #bbb;
+	cursor: pointer;
+	text-align: center;
+}
+.tool_btn_small:hover {
+	background-color: #d0dce8;
+	border-color: #99b;
+	color: #0055aa;
+}
+
+#left_panel {
+	position: absolute;
+	top: 134dp; left: 0; bottom: 30dp;
+	width: 180dp;
+	background-color: rgba(245,245,245,230);
+	border-right: 1dp #ccc;
+	overflow: hidden auto;
+	z-index: 90;
+}
+.tree_header {
+	padding: 6dp 8dp;
+	font-size: 12dp;
+	font-weight: bold;
+	color: #555;
+	background-color: rgba(232,232,232,230);
+	border-bottom: 1dp #ddd;
+}
+.tree_search {
+	padding: 4dp 6dp;
+	border-bottom: 1dp #ddd;
+}
+.tree_search input {
+	width: 100%;
+	box-sizing: border-box;
+	font-size: 12dp;
+	padding: 3dp 5dp;
+	border: 1dp #bbb;
+	background-color: #fff;
+}
+.tree_node {
+	padding: 3dp 8dp;
+	font-size: 12dp;
+	color: #333;
+	cursor: pointer;
+}
+.tree_node:hover { background-color: #e0ecf8; }
+.tree_node.selected { background-color: #c8ddf0; font-weight: bold; }
+.tree_indent { padding-left: 20dp; }
+.tree_indent2 { padding-left: 36dp; }
+
+/* viewport is TRANSPARENT - glTF model shows through */
+#viewport {
+	position: absolute;
+	top: 134dp; left: 180dp; right: 40dp; bottom: 30dp;
+	background-color: transparent;
+	overflow: hidden;
+	z-index: 80;
+}
+
+#right_tools {
+	position: absolute;
+	top: 134dp; right: 0; bottom: 30dp;
+	width: 40dp;
+	background-color: rgba(240,240,240,230);
+	border-left: 1dp #ccc;
+	z-index: 85;
+	padding-top: 10dp;
+}
+.right_tool_icon {
+	display: block;
+	width: 30dp;
+	height: 30dp;
+	margin: 5dp auto;
+	background-color: rgba(224,224,224,230);
+	border: 1dp #bbb;
+	text-align: center;
+	cursor: pointer;
+	font-size: 14dp;
+	line-height: 30dp;
+}
+.right_tool_icon:hover {
+	background-color: #d0dce8;
+	border-color: #99b;
+}
+
+#status_bar {
+	position: absolute;
+	bottom: 0; left: 0; right: 0;
+	height: 30dp;
+	background-color: rgba(245,245,245,230);
+	border-top: 1dp #ccc;
+	z-index: 100;
+}
+#command_input {
+	display: inline-block;
+	vertical-align: top;
+	margin-top: 4dp;
+	margin-left: 10dp;
+}
+#command_input input {
+	font-size: 12dp;
+	padding: 3dp 6dp;
+	border: 1dp #bbb;
+	width: 200dp;
+	background-color: #fff;
+}
+.status_item {
+	display: inline-block;
+	padding: 0 10dp;
+	line-height: 30dp;
+	font-size: 12dp;
+	color: #555;
+	vertical-align: top;
+}
+.status_coords {
+	display: inline-block;
+	padding: 0 8dp;
+	line-height: 30dp;
+	font-size: 11dp;
+	color: #666;
+	vertical-align: top;
+}
