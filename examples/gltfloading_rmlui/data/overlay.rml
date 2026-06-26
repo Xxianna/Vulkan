@@ -2,13 +2,97 @@
 <rml>
 <head>
 	<title>BIM glTF Viewer</title>
-	<link type="text/rcss" href="E:/prj/bim_ntv/Vulkan/external/RmlUi/Samples/assets/rml.rcss"/>
-	<link type="text/rcss" href="overlay.rcss"/>
+	<style>
+body {
+	font-family: "HarmonyOS Sans SC";
+	font-size: 13dp;
+	color: #333;
+	margin: 0; padding: 0;
+	width: 100%; height: 100%;
+	overflow: hidden;
+	background-color: transparent;
+}
+#title_bar { position: absolute; top: 0; left: 0; right: 0; height: 28dp; background-color: rgba(240,240,240,230); border-bottom: 1dp #ccc; z-index: 100; }
+#title_text { display: inline-block; font-size: 14dp; font-weight: bold; color: #333; padding: 6dp 10dp 0; }
+#title_dropdown { display: inline-block; font-size: 10dp; color: #666; padding: 8dp 5dp 0; cursor: pointer; }
+#menu_bar { position: absolute; top: 28dp; left: 0; right: 0; height: 26dp; background-color: rgba(255,255,255,230); border-bottom: 1dp #ddd; z-index: 99; }
+.menu_item { display: inline-block; padding: 6dp 12dp 0; font-size: 13dp; color: #333; cursor: pointer; }
+.menu_item:hover { background-color: #e6f0fa; color: #0066cc; }
+.menu_item.active { background-color: #d0e4f7; color: #0066cc; font-weight: bold; }
+#toolbar_row1 { position: absolute; top: 54dp; left: 0; right: 0; height: 50dp; background-color: rgba(248,248,248,230); border-bottom: 1dp #ddd; z-index: 98; display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; overflow-x: auto; overflow-y: hidden; }
+.toolbar_btn { display: inline-block; padding: 3dp 5dp 2dp; margin: 2dp 1dp; font-size: 11dp; color: #444; background-color: rgba(238,238,238,230); border: 1dp #ccc; cursor: pointer; vertical-align: top; text-align: center; min-width: 30dp; }
+.toolbar_btn:hover { background-color: #dde8f0; border-color: #aac; color: #0066cc; }
+.toolbar_btn .icon { display: block; width: 18dp; height: 18dp; margin: 0 auto; }
+.toolbar_btn .label { display: block; margin-top: 2dp; }
+.toolbar_separator { flex: 0 0 auto; display: inline-block; width: 1dp; height: 20dp; background-color: #ccc; margin: 6dp 4dp 0; }
+#toolbar_row2 { position: absolute; top: 104dp; left: 0; right: 0; height: 30dp; background-color: rgba(240,240,240,230); border-bottom: 1dp #ddd; z-index: 97; overflow: hidden; }
+.tool_btn_small { display: inline-block; padding: 4dp 6dp 0; margin: 2dp 1dp; font-size: 11dp; color: #555; background-color: rgba(232,232,232,230); border: 1dp #bbb; cursor: pointer; text-align: center; }
+.tool_btn_small:hover { background-color: #d0dce8; border-color: #99b; color: #0055aa; }
+#left_panel { position: absolute; top: 134dp; left: 0; bottom: 30dp; width: 180dp; background-color: rgba(245,245,245,230); border-right: 1dp #ccc; overflow: hidden auto; z-index: 90; }
+.tree_header { padding: 6dp 8dp; font-size: 12dp; font-weight: bold; color: #555; background-color: rgba(232,232,232,230); border-bottom: 1dp #ddd; }
+.tree_search { padding: 4dp 6dp; border-bottom: 1dp #ddd; }
+.tree_search input { width: 100%; box-sizing: border-box; font-size: 12dp; padding: 3dp 5dp; border: 1dp #bbb; background-color: #fff; }
+.tree_node { padding: 3dp 8dp; font-size: 12dp; color: #333; cursor: pointer; }
+.tree_node:hover { background-color: #e0ecf8; }
+.tree_node.selected { background-color: #c8ddf0; font-weight: bold; }
+.tree_indent { padding-left: 20dp; }
+.tree_indent2 { padding-left: 36dp; }
+#viewport { position: absolute; top: 134dp; left: 180dp; right: 40dp; bottom: 30dp; background-color: transparent; overflow: hidden; z-index: 80; }
+#right_tools { position: absolute; top: 134dp; right: 0; bottom: 30dp; width: 40dp; background-color: rgba(240,240,240,230); border-left: 1dp #ccc; z-index: 85; padding-top: 10dp; }
+.right_tool_icon { display: block; width: 30dp; height: 30dp; margin: 5dp auto; background-color: rgba(224,224,224,230); border: 1dp #bbb; text-align: center; cursor: pointer; }
+.right_tool_icon:hover { background-color: #d0dce8; border-color: #99b; }
+.right_tool_icon .icon { display: block; width: 20dp; height: 20dp; margin: 5dp auto; }
+#status_bar { position: absolute; bottom: 0; left: 0; right: 0; height: 30dp; background-color: rgba(245,245,245,230); border-top: 1dp #ccc; z-index: 100; }
+#command_input { display: inline-block; vertical-align: top; margin-top: 4dp; margin-left: 10dp; }
+#command_input input { font-size: 12dp; padding: 3dp 6dp; border: 1dp #bbb; width: 200dp; background-color: #fff; }
+.status_item { display: inline-block; padding: 0 10dp; line-height: 30dp; font-size: 12dp; color: #555; vertical-align: top; }
+.status_coords { display: inline-block; padding: 0 8dp; line-height: 30dp; font-size: 11dp; color: #666; vertical-align: top; }
+.icon-project_library { decorator: svg("icons/project_library.svg" crop-to-content); }
+.icon-user { decorator: svg("icons/user.svg" crop-to-content); }
+.icon-reference { decorator: svg("icons/reference.svg" crop-to-content); }
+.icon-group { decorator: svg("icons/group.svg" crop-to-content); }
+.icon-component { decorator: svg("icons/component.svg" crop-to-content); }
+.icon-create { decorator: svg("icons/create.svg" crop-to-content); }
+.icon-edit { decorator: svg("icons/edit.svg" crop-to-content); }
+.icon-render { decorator: svg("icons/render.svg" crop-to-content); }
+.icon-annotate { decorator: svg("icons/annotate.svg" crop-to-content); }
+.icon-locate { decorator: svg("icons/locate.svg" crop-to-content); }
+.icon-beam { decorator: svg("icons/beam.svg" crop-to-content); }
+.icon-column { decorator: svg("icons/column.svg" crop-to-content); }
+.icon-roof { decorator: svg("icons/roof.svg" crop-to-content); }
+.icon-floor { decorator: svg("icons/floor.svg" crop-to-content); }
+.icon-ceiling { decorator: svg("icons/ceiling.svg" crop-to-content); }
+.icon-ground { decorator: svg("icons/ground.svg" crop-to-content); }
+.icon-wall { decorator: svg("icons/wall.svg" crop-to-content); }
+.icon-curtain_wall { decorator: svg("icons/curtain_wall.svg" crop-to-content); }
+.icon-door { decorator: svg("icons/door.svg" crop-to-content); }
+.icon-window { decorator: svg("icons/window.svg" crop-to-content); }
+.icon-canopy { decorator: svg("icons/canopy.svg" crop-to-content); }
+.icon-opening { decorator: svg("icons/opening.svg" crop-to-content); }
+.icon-railing { decorator: svg("icons/railing.svg" crop-to-content); }
+.icon-stair { decorator: svg("icons/stair.svg" crop-to-content); }
+.icon-ramp { decorator: svg("icons/ramp.svg" crop-to-content); }
+.icon-platform { decorator: svg("icons/platform.svg" crop-to-content); }
+.icon-elevator { decorator: svg("icons/elevator.svg" crop-to-content); }
+.icon-equipment_shaft { decorator: svg("icons/equipment_shaft.svg" crop-to-content); }
+.icon-sign { decorator: svg("icons/sign.svg" crop-to-content); }
+.icon-safety_net { decorator: svg("icons/safety_net.svg" crop-to-content); }
+.icon-catwalk { decorator: svg("icons/catwalk.svg" crop-to-content); }
+.icon-ladder { decorator: svg("icons/ladder.svg" crop-to-content); }
+.icon-drain { decorator: svg("icons/drain.svg" crop-to-content); }
+.icon-connector { decorator: svg("icons/connector.svg" crop-to-content); }
+.icon-tool_hand { decorator: svg("icons/tool_hand.svg" crop-to-content); }
+.icon-tool_undo { decorator: svg("icons/tool_undo.svg" crop-to-content); }
+.icon-tool_zoom_in { decorator: svg("icons/tool_zoom_in.svg" crop-to-content); }
+.icon-tool_zoom_out { decorator: svg("icons/tool_zoom_out.svg" crop-to-content); }
+.icon-tool_frame { decorator: svg("icons/tool_frame.svg" crop-to-content); }
+.icon-tool_layers { decorator: svg("icons/tool_layers.svg" crop-to-content); }
+	</style>
 </head>
 <body>
 
 <div id="title_bar">
-	<span id="title_text">glTF Model Viewer</span>
+	<span id="title_text">新项目(4)</span>
 	<span id="title_dropdown">&#9660;</span>
 </div>
 
@@ -26,25 +110,42 @@
 </div>
 
 <div id="toolbar_row1">
-	<div class="toolbar_btn">项目库</div>
-	<div class="toolbar_btn">用户</div>
-	<div class="toolbar_btn">参照</div>
-	<div class="toolbar_btn">组</div>
-	<div class="toolbar_btn">构件</div>
+	<div class="toolbar_btn"><div class="icon icon-project_library"></div><div class="label">项目库</div></div>
+	<div class="toolbar_btn"><div class="icon icon-user"></div><div class="label">用户</div></div>
+	<div class="toolbar_btn"><div class="icon icon-reference"></div><div class="label">参照</div></div>
+	<div class="toolbar_btn"><div class="icon icon-group"></div><div class="label">组</div></div>
+	<div class="toolbar_btn"><div class="icon icon-component"></div><div class="label">构件</div></div>
 	<div class="toolbar_separator"></div>
-	<div class="toolbar_btn">创建</div>
-	<div class="toolbar_btn">编辑</div>
-	<div class="toolbar_btn">渲染</div>
-	<div class="toolbar_btn">标注</div>
-	<div class="toolbar_btn">定位</div>
+	<div class="toolbar_btn"><div class="icon icon-create"></div><div class="label">创建</div></div>
+	<div class="toolbar_btn"><div class="icon icon-edit"></div><div class="label">编辑</div></div>
+	<div class="toolbar_btn"><div class="icon icon-render"></div><div class="label">渲染</div></div>
+	<div class="toolbar_btn"><div class="icon icon-annotate"></div><div class="label">标注</div></div>
+	<div class="toolbar_btn"><div class="icon icon-locate"></div><div class="label">定位</div></div>
 	<div class="toolbar_separator"></div>
-	<div class="toolbar_btn">梁</div>
-	<div class="toolbar_btn">柱</div>
-	<div class="toolbar_btn">屋面板</div>
-	<div class="toolbar_btn">楼板</div>
-	<div class="toolbar_btn">墙</div>
-	<div class="toolbar_btn">门</div>
-	<div class="toolbar_btn">窗</div>
+	<div class="toolbar_btn"><div class="icon icon-beam"></div><div class="label">梁</div></div>
+	<div class="toolbar_btn"><div class="icon icon-column"></div><div class="label">柱</div></div>
+	<div class="toolbar_btn"><div class="icon icon-roof"></div><div class="label">屋面板</div></div>
+	<div class="toolbar_btn"><div class="icon icon-floor"></div><div class="label">楼板</div></div>
+	<div class="toolbar_btn"><div class="icon icon-ceiling"></div><div class="label">吊顶</div></div>
+	<div class="toolbar_btn"><div class="icon icon-ground"></div><div class="label">地面</div></div>
+	<div class="toolbar_btn"><div class="icon icon-wall"></div><div class="label">墙</div></div>
+	<div class="toolbar_btn"><div class="icon icon-curtain_wall"></div><div class="label">幕墙</div></div>
+	<div class="toolbar_btn"><div class="icon icon-door"></div><div class="label">门</div></div>
+	<div class="toolbar_btn"><div class="icon icon-window"></div><div class="label">窗</div></div>
+	<div class="toolbar_btn"><div class="icon icon-canopy"></div><div class="label">雨棚</div></div>
+	<div class="toolbar_btn"><div class="icon icon-opening"></div><div class="label">洞口</div></div>
+	<div class="toolbar_btn"><div class="icon icon-railing"></div><div class="label">护栏</div></div>
+	<div class="toolbar_btn"><div class="icon icon-stair"></div><div class="label">梯段</div></div>
+	<div class="toolbar_btn"><div class="icon icon-ramp"></div><div class="label">坡道</div></div>
+	<div class="toolbar_btn"><div class="icon icon-platform"></div><div class="label">平台</div></div>
+	<div class="toolbar_btn"><div class="icon icon-elevator"></div><div class="label">轿厢</div></div>
+	<div class="toolbar_btn"><div class="icon icon-equipment_shaft"></div><div class="label">设备井</div></div>
+	<div class="toolbar_btn"><div class="icon icon-sign"></div><div class="label">标识</div></div>
+	<div class="toolbar_btn"><div class="icon icon-safety_net"></div><div class="label">防坠网</div></div>
+	<div class="toolbar_btn"><div class="icon icon-catwalk"></div><div class="label">马道</div></div>
+	<div class="toolbar_btn"><div class="icon icon-ladder"></div><div class="label">爬梯</div></div>
+	<div class="toolbar_btn"><div class="icon icon-drain"></div><div class="label">排水沟</div></div>
+	<div class="toolbar_btn"><div class="icon icon-connector"></div><div class="label">连接件</div></div>
 </div>
 
 <div id="toolbar_row2">
@@ -55,36 +156,42 @@
 	<div class="tool_btn_small">一键选取</div>
 	<div class="tool_btn_small">重命名</div>
 	<div class="tool_btn_small">设定视图</div>
+	<div class="tool_btn_small">打开新页签</div>
+	<div class="tool_btn_small">计算外轮廓</div>
 	<div class="tool_btn_small">轻量化</div>
+	<div class="tool_btn_small">撤销轻量化</div>
+	<div class="tool_btn_small">自动批量轻量化</div>
 	<div class="tool_btn_small">删除</div>
+	<div class="tool_btn_small">上传缩略图</div>
+	<div class="tool_btn_small">上传选中缩略图</div>
+	<div class="tool_btn_small">添加热区组</div>
 </div>
 
 <div id="left_panel">
-	<div class="tree_header">&#128269; 默认组</div>
+	<div class="tree_header"><span>&larr;</span> <span>&#128269;</span> 默认组</div>
 	<div class="tree_search"><input type="text" placeholder="搜索..."/></div>
 	<div class="tree_node selected">默认组</div>
 	<div class="tree_node tree_indent">&#9660; 子组</div>
-	<div class="tree_node tree_indent2">构件 III</div>
+	<div class="tree_node tree_indent2">III</div>
 	<div class="tree_node">未分组构件</div>
 </div>
 
-<!-- viewport is transparent - glTF model shows through -->
-<div id="viewport">
-</div>
+<div id="viewport"></div>
 
 <div id="right_tools">
-	<div class="right_tool_icon">&#9995;</div>
-	<div class="right_tool_icon">&#8617;</div>
-	<div class="right_tool_icon">&#128269;+</div>
-	<div class="right_tool_icon">&#128269;-</div>
-	<div class="right_tool_icon">&#9723;</div>
-	<div class="right_tool_icon">&#9776;</div>
+	<div class="right_tool_icon"><div class="icon icon-tool_hand"></div></div>
+	<div class="right_tool_icon"><div class="icon icon-tool_undo"></div></div>
+	<div class="right_tool_icon"><div class="icon icon-tool_zoom_in"></div></div>
+	<div class="right_tool_icon"><div class="icon icon-tool_zoom_out"></div></div>
+	<div class="right_tool_icon"><div class="icon icon-tool_frame"></div></div>
+	<div class="right_tool_icon"><div class="icon icon-tool_layers"></div></div>
+	<div class="right_tool_icon"><div class="icon icon-render"></div></div>
 </div>
 
 <div id="status_bar">
 	<div id="command_input"><input type="text" placeholder="键入命令"/></div>
 	<div class="status_item">mm</div>
-	<div class="status_coords">X=0.000, Y=0.000, Z=0.000</div>
+	<div class="status_coords">X=-52608.3707, Y=-13944.6177, Z=0 长度=0</div>
 </div>
 
 </body>

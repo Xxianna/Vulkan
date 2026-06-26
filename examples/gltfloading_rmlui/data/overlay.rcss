@@ -241,3 +241,44 @@ body {
 	color: #666;
 	vertical-align: top;
 }
+
+.icon-project_library { decorator: svg("icons/project_library.svg" crop-to-content); }
+.icon-user { decorator: svg("icons/user.svg" crop-to-content); }
+.icon-reference { decorator: svg("icons/reference.svg" crop-to-content); }
+.icon-group { decorator: svg("icons/group.svg" crop-to-content); }
+.icon-component { decorator: svg("icons/component.svg" crop-to-content); }
+.icon-create { decorator: svg("icons/create.svg" crop-to-content); }
+.icon-edit { decorator: svg("icons/edit.svg" crop-to-content); }
+.icon-render { decorator: svg("icons/render.svg" crop-to-content); }
+.icon-annotate { decorator: svg("icons/annotate.svg" crop-to-content); }
+.icon-locate { decorator: svg("icons/locate.svg" crop-to-content); }
+.icon-beam { decorator: svg("icons/beam.svg" crop-to-content); }
+.icon-column { decorator: svg("icons/column.svg" crop-to-content); }
+.icon-roof { decorator: svg("icons/roof.svg" crop-to-content); }
+.icon-floor { decorator: svg("icons/floor.svg" crop-to-content); }
+.icon-ceiling { decorator: svg("icons/ceiling.svg" crop-to-content); }
+.icon-ground { decorator: svg("icons/ground.svg" crop-to-content); }
+.icon-wall { decorator: svg("icons/wall.svg" crop-to-content); }
+.icon-curtain_wall { decorator: svg("icons/curtain_wall.svg" crop-to-content); }
+.icon-door { decorator: svg("icons/door.svg" crop-to-content); }
+.icon-window { decorator: svg("icons/window.svg" crop-to-content); }
+.icon-canopy { decorator: svg("icons/canopy.svg" crop-to-content); }
+.icon-opening { decorator: svg("icons/opening.svg" crop-to-content); }
+.icon-railing { decorator: svg("icons/railing.svg" crop-to-content); }
+.icon-stair { decorator: svg("icons/stair.svg" crop-to-content); }
+.icon-ramp { decorator: svg("icons/ramp.svg" crop-to-content); }
+.icon-platform { decorator: svg("icons/platform.svg" crop-to-content); }
+.icon-elevator { decorator: svg("icons/elevator.svg" crop-to-content); }
+.icon-equipment_shaft { decorator: svg("icons/equipment_shaft.svg" crop-to-content); }
+.icon-sign { decorator: svg("icons/sign.svg" crop-to-content); }
+.icon-safety_net { decorator: svg("icons/safety_net.svg" crop-to-content); }
+.icon-catwalk { decorator: svg("icons/catwalk.svg" crop-to-content); }
+.icon-ladder { decorator: svg("icons/ladder.svg" crop-to-content); }
+.icon-drain { decorator: svg("icons/drain.svg" crop-to-content); }
+.icon-connector { decorator: svg("icons/connector.svg" crop-to-content); }
+.icon-tool_hand { decorator: svg("icons/tool_hand.svg" crop-to-content); }
+.icon-tool_undo { decorator: svg("icons/tool_undo.svg" crop-to-content); }
+.icon-tool_zoom_in { decorator: svg("icons/tool_zoom_in.svg" crop-to-content); }
+.icon-tool_zoom_out { decorator: svg("icons/tool_zoom_out.svg" crop-to-content); }
+.icon-tool_frame { decorator: svg("icons/tool_frame.svg" crop-to-content); }
+.icon-tool_layers { decorator: svg("icons/tool_layers.svg" crop-to-content); }
