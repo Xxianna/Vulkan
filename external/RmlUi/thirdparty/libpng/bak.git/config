@@ -1,0 +1,13 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+[remote "origin"]
+	url = https://github.com/pnggroup/libpng.git
+	fetch = +refs/heads/libpng18:refs/remotes/origin/libpng18
+[branch "libpng18"]
+	remote = origin
+	merge = refs/heads/libpng18
+	rebase = true
