@@ -15,6 +15,7 @@ include_directories(external/imgui)
 include_directories(external/tinygltf)
 include_directories(external/ktx/include)
 include_directories(external/ktx/other_include)
+include_directories(external/RmlUi/Include)
 include_directories(base)
 
 OPTION(USE_D2D_WSI "Build the project using Direct to Display swapchain" OFF)
@@ -181,6 +182,17 @@ ELSE(WIN32)
 ENDIF(WIN32)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/")
+
+# RmlUi configuration
+set(RMLUI_SAMPLES OFF CACHE BOOL "" FORCE)
+set(RMLUI_BACKEND "GLFW_VK" CACHE STRING "" FORCE)
+set(RMLUI_FONT_ENGINE "freetype" CACHE STRING "" FORCE)
+set(RMLUI_LUA_BINDINGS OFF CACHE BOOL "" FORCE)
+set(RMLUI_LOTTIE_PLUGIN ON CACHE BOOL "" FORCE)
+set(RMLUI_SVG_PLUGIN ON CACHE BOOL "" FORCE)
+set(RMLUI_HARFBUZZ_SAMPLE ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/RmlUi)
 
 add_subdirectory(base)
 add_subdirectory(examples)
