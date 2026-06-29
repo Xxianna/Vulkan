@@ -30,6 +30,7 @@ namespace vks
 	{
 	public:
 		bool visible{ true };
+		bool freed{ false };
 
 		RmlUiOverlay();
 		~RmlUiOverlay();

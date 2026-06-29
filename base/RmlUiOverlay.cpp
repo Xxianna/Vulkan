@@ -233,28 +233,34 @@ namespace vks
 
 	void RmlUiOverlay::freeResources()
 	{
+		if (freed) return;
+		freed = true;
+
+		// 1. Let RmlUi release all textures/geometry through the still-alive render interface
 		if (context)
 		{
 			Rml::RemoveContext(context->GetName());
 			context = nullptr;
 		}
-
-		render_interface.Shutdown();
-
-		if (vma_allocator)
-		{
-			vmaDestroyAllocator(vma_allocator);
-			vma_allocator = VK_NULL_HANDLE;
-		}
-
 		Rml::Shutdown();
 		file_interface.reset();
 
+		// 2. Now safe to shut down the render interface (all RmlUi resources released)
+		render_interface.Shutdown();
+
+		// 3. Clean up staging buffer (still uses vma_allocator)
 		if (staging_buffer) {
 			vmaUnmapMemory(vma_allocator, staging_allocation);
 			vmaDestroyBuffer(vma_allocator, staging_buffer, staging_allocation);
 			staging_buffer = VK_NULL_HANDLE;
 			staging_mapped = nullptr;
+		}
+
+		// 4. Finally destroy the VMA allocator
+		if (vma_allocator)
+		{
+			vmaDestroyAllocator(vma_allocator);
+			vma_allocator = VK_NULL_HANDLE;
 		}
 	}
 
