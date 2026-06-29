@@ -317,6 +317,9 @@ public:
 		tinygltf::Model glTFInput;
 		tinygltf::TinyGLTF gltfContext;
 		std::string error, warning;
+#if defined(__ANDROID__)
+		tinygltf::asset_manager = androidApp->activity->assetManager;
+#endif
 		bool fileLoaded = gltfContext.LoadASCIIFromFile(&glTFInput, &error, &warning, getAssetPath() + "models/FlightHelmet/glTF/FlightHelmet.gltf");
 		glTFModel.vulkanDevice = vulkanDevice;
 		glTFModel.copyQueue = queue;
@@ -474,7 +477,12 @@ public:
 		samplerCI.addressModeU = samplerCI.addressModeV = samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		VK_CHECK_RESULT(vkCreateSampler(device, &samplerCI, nullptr, &overlaySampler));
 
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		rmluiOverlay.setAssetManager(androidApp->activity->assetManager);
+		rmluiOverlay.loadFontFromAssets("rmlui_assets/HarmonyOS_Sans_SC_Regular.ttf", "HarmonyOS Sans SC");
+#else
 		Rml::LoadFontFace("E:/prj/bim_ntv/Vulkan/external/RmlUi/Samples/assets/HarmonyOS_Sans_SC_Regular.ttf");
+#endif
 
 		Rml::ElementDocument* doc = rmluiOverlay.getContext()->LoadDocument("overlay.rml");
 		if (doc) {

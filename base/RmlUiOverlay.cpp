@@ -8,22 +8,67 @@
 #include <chrono>
 #include <stdio.h>
 
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#include <android/asset_manager.h>
+#endif
+
 namespace vks
 {
-	// File interface - resolves paths relative to a root directory (like ShellFileInterface in bim)
+	// File interface - resolves paths relative to a root directory
 	RmlUiFileInterface::RmlUiFileInterface(const Rml::String& root) : root(root) {}
 	RmlUiFileInterface::~RmlUiFileInterface() {}
+
 	Rml::FileHandle RmlUiFileInterface::Open(const Rml::String& path)
 	{
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		if (!asset_manager) return (Rml::FileHandle)nullptr;
+		Rml::String full_path = root + path;
+		AAsset* asset = AAssetManager_open(asset_manager, full_path.c_str(), AASSET_MODE_RANDOM);
+		return (Rml::FileHandle)asset;
+#else
 		FILE* fp = fopen((root + path).c_str(), "rb");
 		if (fp) return (Rml::FileHandle)fp;
 		fp = fopen(path.c_str(), "rb");
 		return (Rml::FileHandle)fp;
+#endif
 	}
-	void RmlUiFileInterface::Close(Rml::FileHandle file) { fclose((FILE*)file); }
-	size_t RmlUiFileInterface::Read(void* buffer, size_t size, Rml::FileHandle file) { return fread(buffer, 1, size, (FILE*)file); }
-	bool RmlUiFileInterface::Seek(Rml::FileHandle file, long offset, int origin) { return fseek((FILE*)file, offset, origin) == 0; }
-	size_t RmlUiFileInterface::Tell(Rml::FileHandle file) { return ftell((FILE*)file); }
+
+	void RmlUiFileInterface::Close(Rml::FileHandle file)
+	{
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		AAsset_close((AAsset*)file);
+#else
+		fclose((FILE*)file);
+#endif
+	}
+
+	size_t RmlUiFileInterface::Read(void* buffer, size_t size, Rml::FileHandle file)
+	{
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		return (size_t)AAsset_read((AAsset*)file, buffer, size);
+#else
+		return fread(buffer, 1, size, (FILE*)file);
+#endif
+	}
+
+	bool RmlUiFileInterface::Seek(Rml::FileHandle file, long offset, int origin)
+	{
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		return AAsset_seek((AAsset*)file, offset, origin) != (off_t)-1;
+#else
+		return fseek((FILE*)file, offset, origin) == 0;
+#endif
+	}
+
+	size_t RmlUiFileInterface::Tell(Rml::FileHandle file)
+	{
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		AAsset* asset = (AAsset*)file;
+		return (size_t)(AAsset_getLength(asset) - AAsset_getRemainingLength(asset));
+#else
+		return ftell((FILE*)file);
+#endif
+	}
 
 	// Simple system interface using std::chrono
 	class RmlUiSystemInterface : public Rml::SystemInterface
@@ -94,7 +139,13 @@ namespace vks
 		vk_queue = graphicsQueue;
 
 		// Set up file interface (like Shell in bim example) - must be before Rml::Initialise()
-		file_interface = Rml::MakeUnique<RmlUiFileInterface>("E:/prj/bim_ntv/Vulkan/examples/gltfloading_rmlui/data/");
+		file_interface = Rml::MakeUnique<RmlUiFileInterface>(
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+			"overlay/"
+#else
+			"E:/prj/bim_ntv/Vulkan/examples/gltfloading_rmlui/data/"
+#endif
+		);
 		Rml::SetFileInterface(file_interface.get());
 
 		// Initialize RmlUi
@@ -267,6 +318,31 @@ namespace vks
 			vma_allocator = VK_NULL_HANDLE;
 		}
 	}
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+	void RmlUiOverlay::setAssetManager(AAssetManager* mgr)
+	{
+		asset_manager = mgr;
+		if (file_interface)
+			file_interface->setAssetManager(mgr);
+	}
+
+	bool RmlUiOverlay::loadFontFromAssets(const Rml::String& asset_path, const Rml::String& family)
+	{
+		if (!asset_manager) return false;
+		AAsset* asset = AAssetManager_open(asset_manager, asset_path.c_str(), AASSET_MODE_BUFFER);
+		if (!asset) return false;
+		size_t size = (size_t)AAsset_getLength(asset);
+		// Data must remain alive until Rml::Shutdown (per RmlUi docs)
+		Rml::byte* data = new Rml::byte[size];
+		AAsset_read(asset, data, size);
+		AAsset_close(asset);
+		bool ok = Rml::LoadFontFace(Rml::Span<const Rml::byte>(data, size), family,
+			Rml::Style::FontStyle::Normal, Rml::Style::FontWeight::Normal);
+		if (!ok) delete[] data;
+		return ok;
+	}
+#endif
 
 	void RmlUiOverlay::update()
 	{

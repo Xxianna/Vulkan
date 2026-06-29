@@ -7,6 +7,10 @@
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/FileInterface.h>
 
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#include <android/asset_manager.h>
+#endif
+
 // Forward declarations to avoid including VulkanDevice.h (which includes vulkan/vulkan.h)
 namespace vks { struct VulkanDevice; }
 
@@ -22,8 +26,14 @@ namespace vks
 		size_t Read(void* buffer, size_t size, Rml::FileHandle file) override;
 		bool Seek(Rml::FileHandle file, long offset, int origin) override;
 		size_t Tell(Rml::FileHandle file) override;
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		void setAssetManager(AAssetManager* mgr) { asset_manager = mgr; }
+#endif
 	private:
 		Rml::String root;
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		AAssetManager* asset_manager{ nullptr };
+#endif
 	};
 
 	class RmlUiOverlay
@@ -37,6 +47,11 @@ namespace vks
 
 		void prepare(VkInstance instance, vks::VulkanDevice* vulkanDevice, VkQueue graphicsQueue, uint32_t graphicsQueueFamily, int width, int height);
 		void freeResources();
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		void setAssetManager(AAssetManager* mgr);
+		bool loadFontFromAssets(const Rml::String& asset_path, const Rml::String& family);
+#endif
 
 		void update();
 		void render();
@@ -86,5 +101,9 @@ namespace vks
 
 		int rmlui_width{ 0 };
 		int rmlui_height{ 0 };
+
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+		AAssetManager* asset_manager{ nullptr };
+#endif
 	};
 }
