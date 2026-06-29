@@ -541,3 +541,77 @@ See [CREDITS.md](CREDITS.md) for additional credits and attributions.
    - 修复：`VK_BLEND_OP_SUBTRACT` → `VK_BLEND_OP_ADD`
 
 **备注**：RmlUi 独立样本均使用直接渲染路径，不经过离屏合成，因此该 bug 未被上游发现。DX12 后端对应位置使用的是正确的 `D3D12_BLEND_OP_ADD`。
+
+---
+
+## 全部修改记录 2026.6.29
+
+基于 `b9312125` (修复ui透明合成bug) 之后的 4 次提交 + 未提交改动。
+
+---
+
+### 提交 1：`3c27af70` 修复rmlui resize响应
+
+**目的**：窗口缩放时 RmlUi 离屏渲染未跟随更新，导致 UI 模糊和交互错位。
+
+**修改**：
+- `external/RmlUi/Backends/RmlUi_Renderer_VK.h/.cpp`：新增 `RecreateOffscreenSync()` — 销毁并重建 offscreen fence 和 semaphore
+- `base/RmlUiOverlay.cpp`：`resize()` 中 `SetViewport` 后调用 `RecreateOffscreenSync()`
+- `examples/gltfloading_rmlui/gltfloading_rmlui.cpp`：新增 `windowResized()` 重写，调用 `rmluiOverlay.resize()` + `updateOverlayDescriptorSet()`
+
+**原理**：RmlUi 的 `SetViewport` 在离屏模式下调用 `Destroy_Offscreen_Resources()` 销毁全部资源（含 fence/semaphore），但 `Initialize_Offscreen_Resources()` 不重建同步原语，导致后续渲染死锁或崩溃。
+
+---
+
+### 提交 2：`227ae364` 修复关闭时报错
+
+**目的**：退出程序时 `vmaDestroyAllocator` 崩溃（`VmaDeviceMemoryBlock::Destroy`）。
+
+**修改**：
+- `base/RmlUiOverlay.h`：新增 `bool freed` 标志
+- `base/RmlUiOverlay.cpp` `freeResources()`：
+  - 加 `freed` 守卫防止 `~VulkanExample` 和 `~RmlUiOverlay` 双重调用
+  - 调整析构顺序：① `Rml::Shutdown()`（RmlUi 通过还活着的渲染接口释放纹理）→ ② `render_interface.Shutdown()` → ③ staging buffer 清理 → ④ `vmaDestroyAllocator`
+
+**原理**：原顺序先关渲染接口再调 `Rml::Shutdown()`，RmlUi 释放纹理时渲染接口已销毁，VMA 内存块未正确归还。
+
+---
+
+### 提交 3：`ce3c5d58` 安卓编译，rmlui
+
+**目的**：解决 RmlUi 在 Android 上的编译兼容性问题，搭建构建系统。
+
+**修改**：
+- `android/build.gradle`：`compileSdkVersion` 33→36（匹配已安装 SDK platform）
+- `android/examples/base/CMakeLists.txt`：排除 `RmlUiOverlay.cpp`（避免所有示例编译它但缺 RmlUi 头文件）；链接 `vulkan` 库
+- `android/examples/gltfloading_rmlui/`：新建 `CMakeLists.txt`、`build.gradle`、`AndroidManifest.xml`
+- `base/VulkanAndroid.h/.cpp`：函数指针声明/定义、`loadVulkanLibrary/loadVulkanFunctions/freeVulkanLibrary` 用 `#ifdef VK_NO_PROTOTYPES` 包裹
+- `external/RmlUi/Backends/RmlUi_Include_Vulkan.h`：`RMLUI_PLATFORM_UNIX` 条件加 `&& !defined(__ANDROID__)`
+- `base/RmlUiOverlay.cpp`：`RmlUiFileInterface` 全部方法加 `#ifdef ANDROID` 使用 `AAssetManager` API；`convertKey()` 新增 AKEYCODE 映射分支；`getKeyModifiers()` 非 Windows 返回 0；文件接口 root 路径 Android 用 `"overlay/"`
+- `examples/gltfloading_rmlui/gltfloading_rmlui.cpp`：`OnHandleMessage` 用 `#ifdef _WIN32` 包裹；`loadAssets()` 设置 `tinygltf::asset_manager`；字体加载平台分支
+
+**原理**：
+- `VK_NO_PROTOTYPES` 移除后 vulkan.h 提供函数原型，与 VulkanAndroid.h 的函数指针变量声明冲突 → `#ifdef` 互斥
+- RmlUi 的 `Platform.h` 把 Android 归入 `else` → `RMLUI_PLATFORM_LINUX` → 设置 `VK_USE_PLATFORM_XCB_KHR` → 找不到 `xcb/xcb.h` → 排除 Android
+- Android APK 内文件无法 `fopen`，必须通过 `AAssetManager`
+
+---
+
+### 提交 4：`bddaa840` vulkan-rmlui-bim示例支持安卓
+
+**目的**：完成 Android 端资源加载和 Activity 入口。
+
+**修改**：
+- `android/examples/gltfloading_rmlui/build.gradle`：`abiFilters` 改为 `"arm64-v8a", "x86_64"`
+- `android/examples/gltfloading_rmlui/src/main/java/.../VulkanActivity.java`：新建（从 triangle 复制，NativeActivity 加载 native-lib）
+- `base/RmlUiOverlay.h`：新增 `AAssetManager` 成员、`setAssetManager()`、`loadFontFromAssets()` 声明
+- `base/RmlUiOverlay.cpp`：实现 `setAssetManager()` 传递到 file_interface；实现 `loadFontFromAssets()` 从 APK 读字体数据调用 `Rml::LoadFontFace(Span<byte>)`
+- `examples/gltfloading_rmlui/gltfloading_rmlui.cpp`：`setupRmlUi()` 中 Android 调用 `setAssetManager` + `loadFontFromAssets`，Windows 保持 `Rml::LoadFontFace(路径)`
+
+**原理**：`Rml::LoadFontFace` 有 `Span<const byte>` 重载，接受内存数据（要求数据生命周期到 `Rml::Shutdown`）。Android 上通过 `AAssetManager` 读入 `new byte[]` 后传入。`VulkanActivity` 是 AndroidManifest 声明的入口 Activity，继承 `NativeActivity`，通过 `System.loadLibrary("native-lib")` 加载原生库。
+
+---
+
+### 未提交改动
+
+- `README.md`：本记录
