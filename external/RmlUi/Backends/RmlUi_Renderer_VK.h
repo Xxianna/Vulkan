@@ -55,6 +55,8 @@ public:
 	VkSemaphore GetRenderCompleteSemaphore() const;
 	bool IsOffscreenMode() const;
 	void WaitForOffscreenFence() const;
+	// Recreate offscreen fence and semaphore (needed after SetViewport which destroys them).
+	void RecreateOffscreenSync();
 
 	// -- Inherited from Rml::RenderInterface --
 

@@ -3385,6 +3385,20 @@ void RenderInterface_VK::WaitForOffscreenFence() const
 	}
 }
 
+void RenderInterface_VK::RecreateOffscreenSync()
+{
+	if (m_offscreen_fence) { vkDestroyFence(m_p_device, m_offscreen_fence, nullptr); m_offscreen_fence = VK_NULL_HANDLE; }
+	if (m_offscreen_render_complete_semaphore) { vkDestroySemaphore(m_p_device, m_offscreen_render_complete_semaphore, nullptr); m_offscreen_render_complete_semaphore = VK_NULL_HANDLE; }
+	{
+		VkFenceCreateInfo fi{}; fi.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO; fi.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		vkCreateFence(m_p_device, &fi, nullptr, &m_offscreen_fence);
+	}
+	{
+		VkSemaphoreCreateInfo si{}; si.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		vkCreateSemaphore(m_p_device, &si, nullptr, &m_offscreen_render_complete_semaphore);
+	}
+}
+
 // GLAD_VULKAN_IMPLEMENTATION removed - using standard Vulkan loader
 
 // VMA implementation must be compiled in exactly one translation unit.

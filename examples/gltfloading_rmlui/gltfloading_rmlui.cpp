@@ -498,6 +498,12 @@ public:
 		prepared = true;
 	}
 
+	void windowResized() override
+	{
+		rmluiOverlay.resize(width, height);
+		updateOverlayDescriptorSet();
+	}
+
 	void buildCommandBuffer()
 	{
 		VkCommandBuffer cmdBuffer = drawCmdBuffers[currentBuffer];

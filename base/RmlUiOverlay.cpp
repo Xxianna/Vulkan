@@ -306,6 +306,7 @@ namespace vks
 		}
 
 		render_interface.SetViewport(width, height);
+		render_interface.RecreateOffscreenSync(); // SetViewport destroys fence/semaphore in offscreen mode
 	}
 
 	void RmlUiOverlay::processMouseMove(float x, float y)
