@@ -527,3 +527,17 @@ Assorted samples showing graphical effects not special to Vulkan.
 
 ## Credits and Attributions
 See [CREDITS.md](CREDITS.md) for additional credits and attributions.
+
+## gltfloading_rmlui 透明度修复记录 2026.6.29
+
+**问题**：RmlUi 离屏渲染的文字和 SVG 透明区域在与 3D 场景合成时，整个 UI 变为完全透明，直接穿透看到 glTF 模型而非下层 UI。
+
+**原因**：两处混合模式错误。
+
+1. **合成管线**（`examples/gltfloading_rmlui/gltfloading_rmlui.cpp`）：离屏纹理已是预乘 alpha（premultiplied alpha），但合成时 `srcColorBlendFactor` 使用了 `VK_BLEND_FACTOR_SRC_ALPHA`，导致颜色被二次预乘，半透明区域颜色趋近于零。
+   - 修复：`VK_BLEND_FACTOR_SRC_ALPHA` → `VK_BLEND_FACTOR_ONE`
+
+2. **RmlUi Vulkan 后端离屏渲染**（`external/RmlUi/Backends/RmlUi_Renderer_VK.cpp`）：alpha 通道混合操作使用了 `VK_BLEND_OP_SUBTRACT`，多层半透明元素叠加时 alpha 不断衰减（如两层 50% 叠加后 alpha 从正确的 0.75 降到 0.25），合成时背景大量穿透。该 bug 在直接渲染到 swapchain 时不会触发（alpha 值不被使用），仅在离屏合成场景暴露。
+   - 修复：`VK_BLEND_OP_SUBTRACT` → `VK_BLEND_OP_ADD`
+
+**备注**：RmlUi 独立样本均使用直接渲染路径，不经过离屏合成，因此该 bug 未被上游发现。DX12 后端对应位置使用的是正确的 `D3D12_BLEND_OP_ADD`。

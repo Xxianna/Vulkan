@@ -1991,7 +1991,7 @@ void RenderInterface_VK::Create_Pipelines() noexcept
 	info_color_blend_att.colorBlendOp = VkBlendOp::VK_BLEND_OP_ADD;
 	info_color_blend_att.srcAlphaBlendFactor = VkBlendFactor::VK_BLEND_FACTOR_ONE;
 	info_color_blend_att.dstAlphaBlendFactor = VkBlendFactor::VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	info_color_blend_att.alphaBlendOp = VkBlendOp::VK_BLEND_OP_SUBTRACT;
+	info_color_blend_att.alphaBlendOp = VkBlendOp::VK_BLEND_OP_ADD;
 
 	VkPipelineColorBlendStateCreateInfo info_color_blend_state = {};
 	info_color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;

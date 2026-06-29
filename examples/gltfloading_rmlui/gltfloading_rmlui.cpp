@@ -434,7 +434,7 @@ public:
 		VkPipelineLayoutCreateInfo overlayPLCI = vks::initializers::pipelineLayoutCreateInfo(&overlayDescriptorSetLayout, 1);
 		VK_CHECK_RESULT(vkCreatePipelineLayout(device, &overlayPLCI, nullptr, &overlayPipelineLayout));
 		VkPipelineColorBlendAttachmentState overlayBlend = vks::initializers::pipelineColorBlendAttachmentState(0xf, VK_TRUE);
-		overlayBlend.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA; overlayBlend.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		overlayBlend.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; overlayBlend.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		overlayBlend.colorBlendOp = VK_BLEND_OP_ADD; overlayBlend.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; overlayBlend.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		VkPipelineColorBlendStateCreateInfo overlayBlendCI = vks::initializers::pipelineColorBlendStateCreateInfo(1, &overlayBlend);
 		VkPipelineDepthStencilStateCreateInfo overlayDSCI = vks::initializers::pipelineDepthStencilStateCreateInfo(VK_FALSE, VK_FALSE, VK_COMPARE_OP_ALWAYS);
