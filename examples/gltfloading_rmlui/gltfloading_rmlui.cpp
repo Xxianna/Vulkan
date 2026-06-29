@@ -556,6 +556,7 @@ public:
 			rmluiOverlay.processKeyDown(rmlKey, vks::RmlUiOverlay::getKeyModifiers());
 	}
 
+#ifdef _WIN32
 	virtual void OnHandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override
 	{
 		switch (uMsg) {
@@ -593,6 +594,7 @@ public:
 		}
 		}
 	}
+#endif
 };
 
 VULKAN_EXAMPLE_MAIN()

@@ -15,6 +15,7 @@
 
 android_app* androidApp;
 
+#ifdef VK_NO_PROTOTYPES
 PFN_vkCreateInstance vkCreateInstance;
 PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
 PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
@@ -144,15 +145,19 @@ PFN_vkQueuePresentKHR vkQueuePresentKHR;
 PFN_vkResetCommandBuffer vkResetCommandBuffer;
 
 PFN_vkGetPhysicalDeviceImageFormatProperties vkGetPhysicalDeviceImageFormatProperties;
+#endif // VK_NO_PROTOTYPES
 
 int32_t vks::android::screenDensity;
 
+#ifdef VK_NO_PROTOTYPES
 void *libVulkan;
+#endif
 
 namespace vks
 {
 	namespace android
 	{
+#ifdef VK_NO_PROTOTYPES
 		// Dynamically load Vulkan library and base function pointers
 		bool loadVulkanLibrary()
 		{
@@ -337,6 +342,11 @@ namespace vks
 		{
 			dlclose(libVulkan);
 		}
+#else
+		bool loadVulkanLibrary() { return true; }
+		void loadVulkanFunctions(VkInstance) {}
+		void freeVulkanLibrary() {}
+#endif
 
 		void getDeviceConfig()
 		{

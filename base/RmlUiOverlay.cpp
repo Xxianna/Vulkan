@@ -1,6 +1,10 @@
 #include "RmlUiOverlay.h"
 #include "VulkanDevice.h"
 
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#include <android/keycodes.h>
+#endif
+
 #include <chrono>
 #include <stdio.h>
 
@@ -379,6 +383,7 @@ namespace vks
 
 	Rml::Input::KeyIdentifier RmlUiOverlay::convertKey(int keyCode)
 	{
+#ifdef _WIN32
 		// Win32 VK codes to RmlUi key mapping
 		switch (keyCode)
 		{
@@ -450,12 +455,89 @@ namespace vks
 		case VK_F12: return Rml::Input::KI_F12;
 		default: return Rml::Input::KI_UNKNOWN;
 		}
+#elif defined(VK_USE_PLATFORM_ANDROID_KHR)
+		// Android AKEYCODE to RmlUi key mapping
+		switch (keyCode)
+		{
+		case AKEYCODE_0: return Rml::Input::KI_0;
+		case AKEYCODE_1: return Rml::Input::KI_1;
+		case AKEYCODE_2: return Rml::Input::KI_2;
+		case AKEYCODE_3: return Rml::Input::KI_3;
+		case AKEYCODE_4: return Rml::Input::KI_4;
+		case AKEYCODE_5: return Rml::Input::KI_5;
+		case AKEYCODE_6: return Rml::Input::KI_6;
+		case AKEYCODE_7: return Rml::Input::KI_7;
+		case AKEYCODE_8: return Rml::Input::KI_8;
+		case AKEYCODE_9: return Rml::Input::KI_9;
+		case AKEYCODE_A: return Rml::Input::KI_A;
+		case AKEYCODE_B: return Rml::Input::KI_B;
+		case AKEYCODE_C: return Rml::Input::KI_C;
+		case AKEYCODE_D: return Rml::Input::KI_D;
+		case AKEYCODE_E: return Rml::Input::KI_E;
+		case AKEYCODE_F: return Rml::Input::KI_F;
+		case AKEYCODE_G: return Rml::Input::KI_G;
+		case AKEYCODE_H: return Rml::Input::KI_H;
+		case AKEYCODE_I: return Rml::Input::KI_I;
+		case AKEYCODE_J: return Rml::Input::KI_J;
+		case AKEYCODE_K: return Rml::Input::KI_K;
+		case AKEYCODE_L: return Rml::Input::KI_L;
+		case AKEYCODE_M: return Rml::Input::KI_M;
+		case AKEYCODE_N: return Rml::Input::KI_N;
+		case AKEYCODE_O: return Rml::Input::KI_O;
+		case AKEYCODE_P: return Rml::Input::KI_P;
+		case AKEYCODE_Q: return Rml::Input::KI_Q;
+		case AKEYCODE_R: return Rml::Input::KI_R;
+		case AKEYCODE_S: return Rml::Input::KI_S;
+		case AKEYCODE_T: return Rml::Input::KI_T;
+		case AKEYCODE_U: return Rml::Input::KI_U;
+		case AKEYCODE_V: return Rml::Input::KI_V;
+		case AKEYCODE_W: return Rml::Input::KI_W;
+		case AKEYCODE_X: return Rml::Input::KI_X;
+		case AKEYCODE_Y: return Rml::Input::KI_Y;
+		case AKEYCODE_Z: return Rml::Input::KI_Z;
+		case AKEYCODE_SPACE: return Rml::Input::KI_SPACE;
+		case AKEYCODE_ENTER: return Rml::Input::KI_RETURN;
+		case AKEYCODE_ESCAPE: return Rml::Input::KI_ESCAPE;
+		case AKEYCODE_TAB: return Rml::Input::KI_TAB;
+		case AKEYCODE_DEL: return Rml::Input::KI_BACK;
+		case AKEYCODE_FORWARD_DEL: return Rml::Input::KI_DELETE;
+		case AKEYCODE_HOME: return Rml::Input::KI_HOME;
+		case AKEYCODE_MOVE_END: return Rml::Input::KI_END;
+		case AKEYCODE_PAGE_UP: return Rml::Input::KI_PRIOR;
+		case AKEYCODE_PAGE_DOWN: return Rml::Input::KI_NEXT;
+		case AKEYCODE_DPAD_LEFT: return Rml::Input::KI_LEFT;
+		case AKEYCODE_DPAD_RIGHT: return Rml::Input::KI_RIGHT;
+		case AKEYCODE_DPAD_UP: return Rml::Input::KI_UP;
+		case AKEYCODE_DPAD_DOWN: return Rml::Input::KI_DOWN;
+		case AKEYCODE_SHIFT_LEFT: return Rml::Input::KI_LSHIFT;
+		case AKEYCODE_SHIFT_RIGHT: return Rml::Input::KI_RSHIFT;
+		case AKEYCODE_CTRL_LEFT: return Rml::Input::KI_LCONTROL;
+		case AKEYCODE_CTRL_RIGHT: return Rml::Input::KI_RCONTROL;
+		case AKEYCODE_ALT_LEFT: return Rml::Input::KI_LMENU;
+		case AKEYCODE_ALT_RIGHT: return Rml::Input::KI_RMENU;
+		case AKEYCODE_F1: return Rml::Input::KI_F1;
+		case AKEYCODE_F2: return Rml::Input::KI_F2;
+		case AKEYCODE_F3: return Rml::Input::KI_F3;
+		case AKEYCODE_F4: return Rml::Input::KI_F4;
+		case AKEYCODE_F5: return Rml::Input::KI_F5;
+		case AKEYCODE_F6: return Rml::Input::KI_F6;
+		case AKEYCODE_F7: return Rml::Input::KI_F7;
+		case AKEYCODE_F8: return Rml::Input::KI_F8;
+		case AKEYCODE_F9: return Rml::Input::KI_F9;
+		case AKEYCODE_F10: return Rml::Input::KI_F10;
+		case AKEYCODE_F11: return Rml::Input::KI_F11;
+		case AKEYCODE_F12: return Rml::Input::KI_F12;
+		default: return Rml::Input::KI_UNKNOWN;
+		}
+#else
+		return Rml::Input::KI_UNKNOWN;
+#endif
 	}
 
 	Rml::Input::KeyModifier RmlUiOverlay::getKeyModifiers()
 	{
+#ifdef _WIN32
 		int modifiers = 0;
-		// Check current key state via Win32 API
 		if (GetKeyState(VK_SHIFT) & 0x8000)
 			modifiers |= Rml::Input::KM_SHIFT;
 		if (GetKeyState(VK_CONTROL) & 0x8000)
@@ -467,5 +549,8 @@ namespace vks
 		if (GetKeyState(VK_NUMLOCK) & 1)
 			modifiers |= Rml::Input::KM_NUMLOCK;
 		return static_cast<Rml::Input::KeyModifier>(modifiers);
+#else
+		return static_cast<Rml::Input::KeyModifier>(0);
+#endif
 	}
 }

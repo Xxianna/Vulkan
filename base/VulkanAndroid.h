@@ -37,8 +37,8 @@ extern android_app* androidApp;
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, "vulkanExample", __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "vulkanExample", __VA_ARGS__))
 
-// Function pointer prototypes
-// Not complete, just the functions used in the caps viewer!
+// Function pointer prototypes - only needed when VK_NO_PROTOTYPES is defined
+#ifdef VK_NO_PROTOTYPES
 extern PFN_vkCreateInstance vkCreateInstance;
 extern PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
 extern PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
@@ -168,6 +168,7 @@ extern PFN_vkQueuePresentKHR vkQueuePresentKHR;
 extern PFN_vkResetCommandBuffer vkResetCommandBuffer;
 
 extern PFN_vkGetPhysicalDeviceImageFormatProperties vkGetPhysicalDeviceImageFormatProperties;
+#endif // VK_NO_PROTOTYPES
 
 namespace vks
 {

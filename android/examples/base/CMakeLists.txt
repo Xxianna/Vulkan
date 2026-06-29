@@ -1,4 +1,5 @@
 file(GLOB BASE_SRC "../../../base/*.cpp" "../../../external/imgui/*.cpp")
+list(FILTER BASE_SRC EXCLUDE REGEX ".*RmlUiOverlay\\.cpp$")
 
 add_library(libbase SHARED ${BASE_SRC})
 
@@ -37,4 +38,5 @@ target_link_libraries(
 	log
 	z
 	libktx
+	vulkan
 )
