@@ -19,8 +19,9 @@ set(RMLUI_LOTTIE_PLUGIN OFF CACHE BOOL "" FORCE)
 set(RMLUI_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
 set(RMLUI_COMPILER_OPTIONS OFF CACHE BOOL "" FORCE)
 
-# RmlUi needs these custom Find modules to locate bundled deps
-# (CMAKE_MODULE_PATH is passed via Gradle cmake arguments)
+# Build bundled dependencies (zlib, freetype, etc.) at external/ level
+add_subdirectory(${EXTERNAL_DIR} ${CMAKE_BINARY_DIR}/external)
+set(RMLUI_USING_BUNDLED_DEPENDENCIES TRUE)
 
 add_subdirectory(${EXTERNAL_DIR}/RmlUi ${CMAKE_BINARY_DIR}/RmlUi)
 

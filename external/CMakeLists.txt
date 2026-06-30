@@ -5,6 +5,9 @@
 # This avoids "target not in any export set" errors
 set(SKIP_INSTALL_ALL TRUE CACHE BOOL "Skip all install rules" FORCE)
 
+# Make custom Find modules available to sub-dependencies (e.g. libpng finding ZLIB)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+
 # ============================================================================
 # ZLIB - Required by FreeType for compression support
 # ============================================================================

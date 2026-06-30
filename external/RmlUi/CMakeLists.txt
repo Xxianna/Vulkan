@@ -119,9 +119,9 @@ mark_as_advanced(RMLUI_INSTALL_LICENSES_AND_BUILD_INFO)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake/Modules")
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies")
 
-# Add thirdparty Find modules path for bundled dependencies
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
-	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
+# Add Find modules path for bundled dependencies (located in external/ at project level)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../external")
+	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../external")
 endif()
 
 # Add Emscripten-specific Find modules when cross-compiling for Web
@@ -136,13 +136,8 @@ endif()
 
 include("CMake/Utilities.cmake")
 
-# Add thirdparty subdirectory for bundled dependencies (e.g., FreeType)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/CMakeLists.txt")
-	set(RMLUI_USING_BUNDLED_DEPENDENCIES TRUE)
-	# Add custom Find modules to CMake's module path BEFORE including dependencies
-	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty")
-	add_subdirectory("thirdparty")
-endif()
+# Bundled dependencies are built at the project level (external/CMakeLists.txt)
+# RMLUI_USING_BUNDLED_DEPENDENCIES is set by the parent project
 
 include("CMake/Dependencies.cmake")
 
