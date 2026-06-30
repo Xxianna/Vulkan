@@ -10,6 +10,13 @@
 # In addition, the following IMPORTED target is created:
 #   harfbuzz::harfbuzz
 
+# If harfbuzz::harfbuzz target already exists (e.g. built from bundled source), skip discovery
+if(TARGET harfbuzz::harfbuzz)
+	set(HARFBUZZ_FOUND TRUE)
+	set(HARFBUZZ_LIBRARY "harfbuzz::harfbuzz")
+	return()
+endif()
+
 # Look for the library in config mode first.
 find_package(harfbuzz CONFIG QUIET)
 if(TARGET harfbuzz::harfbuzz)

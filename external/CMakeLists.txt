@@ -119,7 +119,7 @@ if(NOT TARGET Freetype::Freetype)
     set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "Disable HarfBuzz support in FreeType" FORCE)
 
     option(FT_DISABLE_ZLIB "Disable zlib support" OFF)
-    option(FT_DISABLE_BZIP2 "Disable bzip2 support" OFF)
+    set(FT_DISABLE_BZIP2 ON CACHE BOOL "Disable bzip2 support" FORCE)
     option(FT_DISABLE_PNG "Disable PNG support" OFF)
     option(FT_DISABLE_BROTLI "Disable Brotli support" OFF)
 
@@ -131,9 +131,13 @@ if(NOT TARGET Freetype::Freetype)
 
     add_subdirectory("freetype")
 
-    # Ensure the target is available as Freetype::Freetype
-    if(TARGET freetype)
-        add_library(Freetype::Freetype ALIAS freetype)
+    # Ensure Freetype::Freetype target exists for downstream consumers (e.g. RmlUi)
+    if(NOT TARGET Freetype::Freetype)
+        if(TARGET freetype)
+            add_library(Freetype::Freetype ALIAS freetype)
+        elseif(TARGET freetype-interface)
+            add_library(Freetype::Freetype ALIAS freetype-interface)
+        endif()
     endif()
 endif()
 
@@ -163,11 +167,10 @@ if(NOT TARGET harfbuzz::harfbuzz AND NOT TARGET harfbuzz)
 
     add_subdirectory("harfbuzz")
 
-    # Create standard aliases so others can find it
-    if(NOT TARGET harfbuzz::harfbuzz)
+    if(TARGET harfbuzz AND NOT TARGET harfbuzz::harfbuzz)
         add_library(harfbuzz::harfbuzz ALIAS harfbuzz)
     endif()
-    if(NOT TARGET HarfBuzz::HarfBuzz)
+    if(TARGET harfbuzz AND NOT TARGET HarfBuzz::HarfBuzz)
         add_library(HarfBuzz::HarfBuzz ALIAS harfbuzz)
     endif()
 endif()
