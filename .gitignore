@@ -244,3 +244,4 @@ libs/vulkan/*.so
 .vscode/*
 
 __pycache__**
+build_linux/
