@@ -37,11 +37,10 @@ if(NOT TARGET PNG::PNG)
     option(PNG_TOOLS "Build libpng tools" OFF)
     option(PNG_INSTALL "Enable libpng installation" OFF)
     
-    # For Emscripten, skip the pnglibconf generation step (requires zlib headers)
-    # and use the prebuilt configuration instead
-    if(EMSCRIPTEN)
-        set(PNG_LIBCONF_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/libpng/pnglibconf.h.prebuilt" CACHE STRING "" FORCE)
-    endif()
+    # Use prebuilt pnglibconf.h to skip AWK-based generation.
+    # AWK scripts have CRLF line endings which break mawk on Linux,
+    # and generated pnglibconf.h may record a different ZLIB_VERNUM than the actual zlib.h.
+    set(PNG_LIBCONF_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/libpng/pnglibconf.h.prebuilt" CACHE STRING "" FORCE)
 
     # Pre-set ZLIB variables so libpng's find_package(ZLIB) succeeds
     set(ZLIB_FOUND TRUE CACHE BOOL "Zlib found")
