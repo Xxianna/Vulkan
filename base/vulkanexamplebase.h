@@ -359,6 +359,8 @@ public:
 	virtual void render() = 0;
 	/** @brief (Virtual) Called after a key was pressed, can be used to do custom key handling */
 	virtual void keyPressed(uint32_t);
+	/** @brief (Virtual) Called after a key was released, can be used to do custom key handling */
+	virtual void keyReleased(uint32_t);
 	/** @brief (Virtual) Called after the mouse cursor moved and before internal events (like camera rotation) is handled */
 	virtual void mouseMoved(double x, double y, bool &handled);
 	/** @brief (Virtual) Called when the window has been resized, can be used by the sample application to recreate resources */
@@ -412,6 +414,12 @@ public:
 	virtual void textInput(const std::string& text) {}
 	/** @brief Called on touch events. action: 0=start, 1=move, 2=end */
 	virtual void touchEvent(int action, const std::vector<vks::TouchPoint>& touches) {}
+	/** @brief Called when a mouse button is pressed. Return true to indicate the event was handled. button: 0=left, 1=middle, 2=right */
+	virtual bool mouseButtonPressed(int button, int x, int y) { return false; }
+	/** @brief Called when a mouse button is released. button: 0=left, 1=middle, 2=right */
+	virtual void mouseButtonReleased(int button, int x, int y) {}
+	/** @brief Called on mouse wheel/scroll. delta: positive=up, negative=down */
+	virtual void mouseWheel(float delta) {}
 	/** @brief Called when the mouse cursor leaves the window */
 	virtual void mouseLeave() {}
 	/** @brief Called when the display DPI/scale factor changes */

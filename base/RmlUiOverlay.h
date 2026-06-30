@@ -81,6 +81,7 @@ namespace vks
 
 		static Rml::Input::KeyIdentifier convertKey(int keyCode);
 		static Rml::Input::KeyModifier getKeyModifiers();
+		static void updateModifierState(int keyCode, bool pressed);
 
 	private:
 		Rml::Context* context{ nullptr };

@@ -142,8 +142,10 @@ namespace vks
 		file_interface = Rml::MakeUnique<RmlUiFileInterface>(
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 			"overlay/"
+#elif defined(VK_PROJECT_SOURCE_DIR)
+			VK_PROJECT_SOURCE_DIR "/examples/gltfloading_rmlui/data/"
 #else
-			"E:/prj/bim_ntv/Vulkan/examples/gltfloading_rmlui/data/"
+			"examples/gltfloading_rmlui/data/"
 #endif
 		);
 		Rml::SetFileInterface(file_interface.get());
@@ -606,9 +608,86 @@ namespace vks
 		default: return Rml::Input::KI_UNKNOWN;
 		}
 #else
-		return Rml::Input::KI_UNKNOWN;
+		// Linux X11/XCB keycodes to RmlUi key mapping
+		switch (keyCode)
+		{
+		case 10: return Rml::Input::KI_1;
+		case 11: return Rml::Input::KI_2;
+		case 12: return Rml::Input::KI_3;
+		case 13: return Rml::Input::KI_4;
+		case 14: return Rml::Input::KI_5;
+		case 15: return Rml::Input::KI_6;
+		case 16: return Rml::Input::KI_7;
+		case 17: return Rml::Input::KI_8;
+		case 18: return Rml::Input::KI_9;
+		case 19: return Rml::Input::KI_0;
+		case 24: return Rml::Input::KI_Q;
+		case 25: return Rml::Input::KI_W;
+		case 26: return Rml::Input::KI_E;
+		case 27: return Rml::Input::KI_R;
+		case 28: return Rml::Input::KI_T;
+		case 29: return Rml::Input::KI_Y;
+		case 30: return Rml::Input::KI_U;
+		case 31: return Rml::Input::KI_I;
+		case 32: return Rml::Input::KI_O;
+		case 33: return Rml::Input::KI_P;
+		case 38: return Rml::Input::KI_A;
+		case 39: return Rml::Input::KI_S;
+		case 40: return Rml::Input::KI_D;
+		case 41: return Rml::Input::KI_F;
+		case 42: return Rml::Input::KI_G;
+		case 43: return Rml::Input::KI_H;
+		case 44: return Rml::Input::KI_J;
+		case 45: return Rml::Input::KI_K;
+		case 46: return Rml::Input::KI_L;
+		case 52: return Rml::Input::KI_Z;
+		case 53: return Rml::Input::KI_X;
+		case 54: return Rml::Input::KI_C;
+		case 55: return Rml::Input::KI_V;
+		case 56: return Rml::Input::KI_B;
+		case 57: return Rml::Input::KI_N;
+		case 58: return Rml::Input::KI_M;
+		case 65: return Rml::Input::KI_SPACE;
+		case 23: return Rml::Input::KI_TAB;
+		case 22: return Rml::Input::KI_BACK;
+		case 36: return Rml::Input::KI_RETURN;
+		case 119: return Rml::Input::KI_DELETE;
+		case 118: return Rml::Input::KI_INSERT;
+		case 110: return Rml::Input::KI_HOME;
+		case 115: return Rml::Input::KI_END;
+		case 112: return Rml::Input::KI_PRIOR;
+		case 117: return Rml::Input::KI_NEXT;
+		case 113: return Rml::Input::KI_LEFT;
+		case 114: return Rml::Input::KI_RIGHT;
+		case 111: return Rml::Input::KI_UP;
+		case 116: return Rml::Input::KI_DOWN;
+		case 50: return Rml::Input::KI_LSHIFT;
+		case 62: return Rml::Input::KI_RSHIFT;
+		case 37: return Rml::Input::KI_LCONTROL;
+		case 105: return Rml::Input::KI_RCONTROL;
+		case 64: return Rml::Input::KI_LMENU;
+		case 108: return Rml::Input::KI_RMENU;
+		case 9:  return Rml::Input::KI_ESCAPE;
+		case 67: return Rml::Input::KI_F1;
+		case 68: return Rml::Input::KI_F2;
+		case 69: return Rml::Input::KI_F3;
+		case 70: return Rml::Input::KI_F4;
+		case 71: return Rml::Input::KI_F5;
+		case 72: return Rml::Input::KI_F6;
+		case 73: return Rml::Input::KI_F7;
+		case 74: return Rml::Input::KI_F8;
+		case 75: return Rml::Input::KI_F9;
+		case 76: return Rml::Input::KI_F10;
+		case 95: return Rml::Input::KI_F11;
+		case 96: return Rml::Input::KI_F12;
+		default: return Rml::Input::KI_UNKNOWN;
+		}
 #endif
 	}
+
+#if !defined(_WIN32) && !defined(VK_USE_PLATFORM_ANDROID_KHR)
+	static int s_tracked_modifiers = 0;
+#endif
 
 	Rml::Input::KeyModifier RmlUiOverlay::getKeyModifiers()
 	{
@@ -625,8 +704,28 @@ namespace vks
 		if (GetKeyState(VK_NUMLOCK) & 1)
 			modifiers |= Rml::Input::KM_NUMLOCK;
 		return static_cast<Rml::Input::KeyModifier>(modifiers);
+#elif !defined(VK_USE_PLATFORM_ANDROID_KHR)
+		return static_cast<Rml::Input::KeyModifier>(s_tracked_modifiers);
 #else
 		return static_cast<Rml::Input::KeyModifier>(0);
 #endif
 	}
+
+#if !defined(_WIN32) && !defined(VK_USE_PLATFORM_ANDROID_KHR)
+	void RmlUiOverlay::updateModifierState(int keyCode, bool pressed)
+	{
+		int mod = 0;
+		switch (keyCode)
+		{
+		case 50: case 62: mod = Rml::Input::KM_SHIFT; break;   // LSHIFT, RSHIFT
+		case 37: case 105: mod = Rml::Input::KM_CTRL; break;    // LCONTROL, RCONTROL
+		case 64: case 108: mod = Rml::Input::KM_ALT; break;     // LMENU, RMENU
+		default: return;
+		}
+		if (pressed)
+			s_tracked_modifiers |= mod;
+		else
+			s_tracked_modifiers &= ~mod;
+	}
+#endif
 }

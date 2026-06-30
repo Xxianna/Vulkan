@@ -2988,14 +2988,16 @@ void VulkanExampleBase::handleEvent(const xcb_generic_event_t *event)
 			mouseState.buttons.middle = true;
 		if (press->detail == XCB_BUTTON_INDEX_3)
 			mouseState.buttons.right = true;
-		// Unified input: mouse buttons (references SDL MOUSEBUTTONDOWN)
-		if (press->detail <= XCB_BUTTON_INDEX_3)
-			inputHandler.ProcessMouseButtonDown(press->detail - 1);
+		// Forward to virtual callback; if handled, skip camera input
+		if (press->detail <= XCB_BUTTON_INDEX_3) {
+			if (!mouseButtonPressed(press->detail - 1, press->event_x, press->event_y))
+				inputHandler.ProcessMouseButtonDown(press->detail - 1);
+		}
 		// Scroll wheel: buttons 4=up, 5=down, 6=left, 7=right (references SDL MOUSEWHEEL)
-		if (press->detail == 4) inputHandler.ProcessMouseWheel(0.0f, 1.0f);
-		if (press->detail == 5) inputHandler.ProcessMouseWheel(0.0f, -1.0f);
-		if (press->detail == 6) inputHandler.ProcessMouseWheel(-1.0f, 0.0f);
-		if (press->detail == 7) inputHandler.ProcessMouseWheel(1.0f, 0.0f);
+		if (press->detail == 4) { inputHandler.ProcessMouseWheel(0.0f, 1.0f); mouseWheel(1.0f); }
+		if (press->detail == 5) { inputHandler.ProcessMouseWheel(0.0f, -1.0f); mouseWheel(-1.0f); }
+		if (press->detail == 6) { inputHandler.ProcessMouseWheel(-1.0f, 0.0f); mouseWheel(-1.0f); }
+		if (press->detail == 7) { inputHandler.ProcessMouseWheel(1.0f, 0.0f); mouseWheel(1.0f); }
 	}
 	break;
 	case XCB_BUTTON_RELEASE:
@@ -3007,9 +3009,11 @@ void VulkanExampleBase::handleEvent(const xcb_generic_event_t *event)
 			mouseState.buttons.middle = false;
 		if (press->detail == XCB_BUTTON_INDEX_3)
 			mouseState.buttons.right = false;
-		// Unified input: mouse buttons (references SDL MOUSEBUTTONUP)
-		if (press->detail <= XCB_BUTTON_INDEX_3)
+		// Forward to virtual callback; if handled, skip camera input
+		if (press->detail <= XCB_BUTTON_INDEX_3) {
+			mouseButtonReleased(press->detail - 1, press->event_x, press->event_y);
 			inputHandler.ProcessMouseButtonUp(press->detail - 1);
+		}
 	}
 	break;
 	case XCB_KEY_PRESS:
@@ -3062,6 +3066,7 @@ void VulkanExampleBase::handleEvent(const xcb_generic_event_t *event)
 				break;
 		}
 		keyPressed(keyEvent->detail);
+		keyReleased(keyEvent->detail);
 		// Feed unified input handler (references SDL KEYUP)
 		inputHandler.ProcessKeyUp(vks::InputHandler::ConvertKeyCode(keyEvent->detail), 0);
 	}
@@ -3369,6 +3374,8 @@ void VulkanExampleBase::setupWindow()
 #endif
 
 void VulkanExampleBase::keyPressed(uint32_t) {}
+
+void VulkanExampleBase::keyReleased(uint32_t) {}
 
 void VulkanExampleBase::mouseMoved(double x, double y, bool & handled) {}
 

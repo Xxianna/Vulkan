@@ -480,8 +480,10 @@ public:
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
 		rmluiOverlay.setAssetManager(androidApp->activity->assetManager);
 		rmluiOverlay.loadFontFromAssets("rmlui_assets/HarmonyOS_Sans_SC_Regular.ttf", "HarmonyOS Sans SC");
+#elif defined(VK_PROJECT_SOURCE_DIR)
+		Rml::LoadFontFace(VK_PROJECT_SOURCE_DIR "/external/RmlUi/Samples/assets/HarmonyOS_Sans_SC_Regular.ttf");
 #else
-		Rml::LoadFontFace("E:/prj/bim_ntv/Vulkan/external/RmlUi/Samples/assets/HarmonyOS_Sans_SC_Regular.ttf");
+		Rml::LoadFontFace("external/RmlUi/Samples/assets/HarmonyOS_Sans_SC_Regular.ttf");
 #endif
 
 		Rml::ElementDocument* doc = rmluiOverlay.getContext()->LoadDocument("overlay.rml");
@@ -559,10 +561,53 @@ public:
 
 	virtual void keyPressed(uint32_t keyCode)
 	{
+#if !defined(_WIN32) && !defined(VK_USE_PLATFORM_ANDROID_KHR)
+		vks::RmlUiOverlay::updateModifierState((int)keyCode, true);
+#endif
 		Rml::Input::KeyIdentifier rmlKey = vks::RmlUiOverlay::convertKey((int)keyCode);
 		if (rmlKey != Rml::Input::KI_UNKNOWN)
 			rmluiOverlay.processKeyDown(rmlKey, vks::RmlUiOverlay::getKeyModifiers());
 	}
+
+#if !defined(_WIN32) && !defined(VK_USE_PLATFORM_ANDROID_KHR)
+	virtual void keyReleased(uint32_t keyCode) override
+	{
+		vks::RmlUiOverlay::updateModifierState((int)keyCode, false);
+		Rml::Input::KeyIdentifier rmlKey = vks::RmlUiOverlay::convertKey((int)keyCode);
+		if (rmlKey != Rml::Input::KI_UNKNOWN)
+			rmluiOverlay.processKeyUp(rmlKey, vks::RmlUiOverlay::getKeyModifiers());
+	}
+
+	virtual bool mouseButtonPressed(int button, int x, int y) override
+	{
+		uint8_t rgba[4];
+		rmluiOverlay.readOffscreenPixel(x, y, rgba);
+		if (rgba[3] < 10) {
+			rmlui_passthrough = true;
+			return false;
+		}
+		rmlui_passthrough = false;
+		rmluiOverlay.processMouseButton(button, true);
+		return rmluiOverlay.wantsCaptureMouse();
+	}
+
+	virtual void mouseButtonReleased(int button, int x, int y) override
+	{
+		rmlui_passthrough = false;
+		rmluiOverlay.processMouseButton(button, false);
+	}
+
+	virtual void mouseWheel(float delta) override
+	{
+		if (!rmlui_passthrough)
+			rmluiOverlay.processMouseWheel(delta);
+	}
+
+	virtual void mouseLeave() override
+	{
+		rmlui_passthrough = false;
+	}
+#endif
 
 #ifdef _WIN32
 	virtual void OnHandleMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override
