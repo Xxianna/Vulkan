@@ -232,6 +232,9 @@ if(EMSCRIPTEN)
 		"-sUSE_WEBGL2=1"
 		"-sFULL_ES3"
 	)
+	target_link_options(${WEBGL_EXAMPLE} PRIVATE
+		"SHELL:--shell-file ${WEBGL_FOLDER}/template.html"
+	)
 
 	# Preload assets into Emscripten virtual filesystem
 	target_link_libraries(${WEBGL_EXAMPLE} PRIVATE

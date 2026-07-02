@@ -613,7 +613,7 @@ public:
 		if (down) context->ProcessMouseButtonDown(button, 0);
 		else context->ProcessMouseButtonUp(button, 0);
 	}
-	void processMouseWheel(float delta) { if (context) context->ProcessMouseWheel(-delta, 0); }
+	bool processMouseWheel(float delta) { if (context) return context->ProcessMouseWheel(-delta, 0); return true; }
 	void processKeyDown(Rml::Input::KeyIdentifier key) { if (context) context->ProcessKeyDown(key, 0); }
 	void processKeyUp(Rml::Input::KeyIdentifier key) { if (context) context->ProcessKeyUp(key, 0); }
 	void processTextInput(Rml::Character ch) { if (context) context->ProcessTextInput(ch); }
@@ -682,6 +682,28 @@ private:
 };
 
 // ============================================================================
+// Emscripten Wheel Event Fallback
+// SDL_MOUSEWHEEL may not fire in all browsers if the canvas lacks focus.
+// This uses Emscripten's HTML5 API to capture wheel events directly.
+// ============================================================================
+
+#ifdef __EMSCRIPTEN__
+static float g_pendingWheelDelta = 0.0f;
+
+static EM_BOOL em_wheel_callback(int eventType, const EmscriptenWheelEvent* wheelEvent, void* userData)
+{
+	float deltaY = 0;
+	switch (wheelEvent->deltaMode) {
+	case DOM_DELTA_PIXEL: deltaY = wheelEvent->deltaY * 0.01f; break;
+	case DOM_DELTA_LINE:  deltaY = wheelEvent->deltaY; break;
+	case DOM_DELTA_PAGE:  deltaY = wheelEvent->deltaY * 3.0f; break;
+	}
+	g_pendingWheelDelta += deltaY;
+	return EM_TRUE;
+}
+#endif
+
+// ============================================================================
 // WebGLExample - Main application
 // ============================================================================
 
@@ -748,6 +770,19 @@ public:
 		// Data model for wireframe toggle
 		Rml::DataModelConstructor model = rmluiOverlay.getContext()->CreateDataModel("settings");
 		if (model) model.Bind("wireframe", &wireframe);
+
+#ifdef __EMSCRIPTEN__
+		// Register wheel event callback directly on canvas for reliable capture
+		emscripten_set_wheel_callback("#canvas", nullptr, true, em_wheel_callback);
+		// Focus canvas so it receives input events
+		EM_ASM({
+			var canvas = document.getElementById('canvas');
+			if (canvas) {
+				canvas.focus();
+				canvas.addEventListener('click', function() { canvas.focus(); });
+			}
+		});
+#endif
 
 		return true;
 	}
@@ -825,10 +860,14 @@ public:
 				break;
 			}
 			case SDL_MOUSEWHEEL:
-				if (!rmlui_passthrough)
-					rmluiOverlay.processMouseWheel((float)ev.wheel.y);
-				else
+#ifndef __EMSCRIPTEN__
+				if (!rmlui_passthrough) {
+					if (rmluiOverlay.processMouseWheel((float)ev.wheel.y))
+						camera.zoom((float)ev.wheel.y);
+				} else {
 					camera.zoom((float)ev.wheel.y);
+				}
+#endif
 				break;
 			case SDL_KEYDOWN: {
 				Rml::Input::KeyIdentifier rmlKey = RmlSDL::ConvertKey(ev.key.keysym.sym);
@@ -848,6 +887,18 @@ public:
 				break;
 			}
 		}
+
+#ifdef __EMSCRIPTEN__
+		if (g_pendingWheelDelta != 0.0f) {
+			if (!rmlui_passthrough) {
+				if (rmluiOverlay.processMouseWheel(g_pendingWheelDelta))
+					camera.zoom(g_pendingWheelDelta);
+			} else {
+				camera.zoom(g_pendingWheelDelta);
+			}
+			g_pendingWheelDelta = 0.0f;
+		}
+#endif
 	}
 
 	void render()
