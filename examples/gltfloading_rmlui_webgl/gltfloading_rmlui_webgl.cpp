@@ -637,24 +637,31 @@ public:
 
 	void update() { if (context && visible) context->Update(); }
 
-	void render()
+	void renderOffscreen()
 	{
 		if (!context || !visible) return;
 
-		// Render RmlUi to overlay FBO
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glViewport(0, 0, width, height);
 		glClearColor(0, 0, 0, 0);
-		glClear(GL_COLOR_BUFFER_BIT);
 
 		render_interface->SetViewport(width, height);
 		render_interface->BeginFrame();
+
+		// GL3 backend binds its internal FBO in BeginFrame,
+		// rebind our FBO so UI renders into our texture
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glClear(GL_COLOR_BUFFER_BIT);
+
 		context->Render();
-		render_interface->EndFrame();
 
+		// Skip EndFrame to prevent GL3 backend from compositing to default FB
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 
-		// Composite overlay texture onto default framebuffer
+	GLuint getColorTexture() const { return colorTexture; }
+
+	void compositeTexture(GLuint texture)
+	{
 		glViewport(0, 0, width, height);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -662,7 +669,7 @@ public:
 
 		glUseProgram(overlayProgram);
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, colorTexture);
+		glBindTexture(GL_TEXTURE_2D, texture);
 		glUniform1i(locSamplerUI, 0);
 		glBindVertexArray(overlayVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -732,6 +739,14 @@ public:
 	bool middleMouseDown = false;
 	int lastMouseX = 0, lastMouseY = 0;
 
+	// glTF offscreen FBO
+	GLuint gltfFBO = 0, gltfColorTex = 0, gltfDepthRBO = 0;
+
+	// Deferred click: stored during handleEvents, processed after UI FBO render
+	bool pendingClick = false;
+	int pendingClickX = 0, pendingClickY = 0;
+	int pendingClickButton = 0;
+
 	WebGLExample() : width(1280), height(720) {}
 
 	bool init()
@@ -792,6 +807,9 @@ public:
 		});
 #endif
 
+		// glTF offscreen FBO
+		createGlTFFBO(width, height);
+
 		return true;
 	}
 
@@ -820,6 +838,36 @@ public:
 		glTFModel.uploadBuffers(vertexBuffer, indexBuffer);
 	}
 
+	void createGlTFFBO(int w, int h)
+	{
+		destroyGlTFFBO();
+		glGenFramebuffers(1, &gltfFBO);
+		glGenTextures(1, &gltfColorTex);
+		glGenRenderbuffers(1, &gltfDepthRBO);
+
+		glBindTexture(GL_TEXTURE_2D, gltfColorTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glBindRenderbuffer(GL_RENDERBUFFER, gltfDepthRBO);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, gltfFBO);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gltfColorTex, 0);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gltfDepthRBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	void destroyGlTFFBO()
+	{
+		if (gltfFBO) { glDeleteFramebuffers(1, &gltfFBO); gltfFBO = 0; }
+		if (gltfColorTex) { glDeleteTextures(1, &gltfColorTex); gltfColorTex = 0; }
+		if (gltfDepthRBO) { glDeleteRenderbuffers(1, &gltfDepthRBO); gltfDepthRBO = 0; }
+	}
+
 	void handleEvents()
 	{
 		SDL_Event ev;
@@ -833,22 +881,23 @@ public:
 					height = ev.window.data2;
 					camera.aspect = (float)width / (float)height;
 					rmluiOverlay.resize(width, height);
+					createGlTFFBO(width, height);
 				}
 				break;
 			case SDL_MOUSEBUTTONDOWN: {
 				int mx = ev.button.x, my = ev.button.y;
 				if (ev.button.button == SDL_BUTTON_LEFT) {
-					uint8_t rgba[4];
-					rmluiOverlay.readOffscreenPixel(mx, my, rgba);
-					if (rgba[3] < 10) {
-						rmlui_passthrough = true;
-					} else {
-						rmlui_passthrough = false;
-						rmluiOverlay.processMouseButton(0, true);
-					}
+					pendingClick = true;
+					pendingClickX = mx;
+					pendingClickY = my;
+					pendingClickButton = 0;
 					mouseDown = true;
 					lastMouseX = mx; lastMouseY = my;
 				} else if (ev.button.button == SDL_BUTTON_MIDDLE) {
+					pendingClick = true;
+					pendingClickX = mx;
+					pendingClickY = my;
+					pendingClickButton = 2;
 					middleMouseDown = true;
 					lastMouseX = mx; lastMouseY = my;
 				}
@@ -856,10 +905,14 @@ public:
 			}
 			case SDL_MOUSEBUTTONUP:
 				if (ev.button.button == SDL_BUTTON_LEFT) {
+					if (!rmlui_passthrough)
+						rmluiOverlay.processMouseButton(0, false);
 					rmlui_passthrough = false;
-					rmluiOverlay.processMouseButton(0, false);
 					mouseDown = false;
 				} else if (ev.button.button == SDL_BUTTON_MIDDLE) {
+					if (!rmlui_passthrough)
+						rmluiOverlay.processMouseButton(2, false);
+					rmlui_passthrough = false;
 					middleMouseDown = false;
 				}
 				break;
@@ -869,7 +922,7 @@ public:
 					rmluiOverlay.processMouseMove(mx, my);
 				if (mouseDown && rmlui_passthrough)
 					camera.rotate(mx - lastMouseX, my - lastMouseY);
-				if (middleMouseDown)
+				if (middleMouseDown && rmlui_passthrough)
 					camera.translate((float)(mx - lastMouseX), (float)(my - lastMouseY));
 				lastMouseX = mx; lastMouseY = my;
 				break;
@@ -919,21 +972,48 @@ public:
 	void render()
 	{
 		camera.update();
-
 		rmluiOverlay.update();
 
-		// Clear default framebuffer
+		// ① Render UI to offscreen FBO
+		rmluiOverlay.renderOffscreen();
+
+		// ② Process pending click (UI FBO now has correct alpha)
+		if (pendingClick) {
+			uint8_t rgba[4];
+			rmluiOverlay.readOffscreenPixel(pendingClickX, pendingClickY, rgba);
+			printf("[CLICK] button=%d pos=(%d,%d) alpha=%d\n", pendingClickButton, pendingClickX, pendingClickY, rgba[3]);
+			if (rgba[3] < 10) {
+				rmlui_passthrough = true;
+			} else {
+				rmlui_passthrough = false;
+				rmluiOverlay.processMouseButton(pendingClickButton, true);
+			}
+			pendingClick = false;
+		}
+
+		// ③ Render glTF to offscreen FBO
+		glBindFramebuffer(GL_FRAMEBUFFER, gltfFBO);
 		glViewport(0, 0, width, height);
 		glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		// Draw glTF model
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 		glTFModel.draw(camera.projMatrix, camera.viewMatrix);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		// Composite RmlUi overlay
-		rmluiOverlay.render();
+		// ④ Composite to default FB: glTF first, then UI overlay
+		glViewport(0, 0, width, height);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
 
+		// Draw glTF texture fullscreen (opaque)
+		rmluiOverlay.compositeTexture(gltfColorTex);
+		// Draw UI texture fullscreen (premultiplied alpha blend)
+		rmluiOverlay.compositeTexture(rmluiOverlay.getColorTexture());
+
+		glEnable(GL_DEPTH_TEST);
 		SDL_GL_SwapWindow(window);
 	}
 
@@ -945,6 +1025,7 @@ public:
 
 	void shutdown()
 	{
+		destroyGlTFFBO();
 		rmluiOverlay.shutdown();
 		RmlGL3::Shutdown();
 		if (glContext) SDL_GL_DeleteContext(glContext);
