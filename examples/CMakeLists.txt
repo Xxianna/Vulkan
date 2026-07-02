@@ -189,4 +189,55 @@ set(EXAMPLES
 	vulkanscene
 )
 
-buildExamples()
+if(NOT EMSCRIPTEN)
+	buildExamples()
+endif()
+
+# ============================================================================
+# WebGL example (Emscripten only)
+# ============================================================================
+if(EMSCRIPTEN)
+	set(WEBGL_EXAMPLE "gltfloading_rmlui_webgl")
+	set(WEBGL_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/${WEBGL_EXAMPLE}")
+
+	# RmlUi GL3 renderer + SDL platform sources
+	set(RMLUI_GL3_BACKEND_DIR "${CMAKE_SOURCE_DIR}/external/RmlUi/Backends")
+
+	add_executable(${WEBGL_EXAMPLE}
+		${WEBGL_FOLDER}/${WEBGL_EXAMPLE}.cpp
+		${RMLUI_GL3_BACKEND_DIR}/RmlUi_Renderer_GL3.cpp
+		${RMLUI_GL3_BACKEND_DIR}/RmlUi_Platform_SDL.cpp
+	)
+
+	target_include_directories(${WEBGL_EXAMPLE} PRIVATE
+		${CMAKE_SOURCE_DIR}/external/RmlUi/Include
+		${CMAKE_SOURCE_DIR}/external/RmlUi/Backends
+		${CMAKE_SOURCE_DIR}/external/tinygltf
+		${CMAKE_SOURCE_DIR}/external/glm
+	)
+
+	target_compile_definitions(${WEBGL_EXAMPLE} PRIVATE RMLUI_SDL_VERSION_MAJOR=2)
+
+	# Emscripten-specific settings
+	set_target_properties(${WEBGL_EXAMPLE} PROPERTIES SUFFIX ".html")
+	target_compile_options(${WEBGL_EXAMPLE} PRIVATE "-sUSE_SDL=2" "-sUSE_SDL_IMAGE=2" "-sSDL2_IMAGE_FORMATS=[\"png\"]")
+	target_link_libraries(${WEBGL_EXAMPLE} PRIVATE
+		rmlui_core
+		rmlui_debugger
+		"-sUSE_SDL=2"
+		"-sUSE_SDL_IMAGE=2"
+		"-sSDL2_IMAGE_FORMATS=[\"png\"]"
+		"-sASYNCIFY"
+		"-sALLOW_MEMORY_GROWTH"
+		"-sUSE_WEBGL2=1"
+		"-sFULL_ES3"
+	)
+
+	# Preload assets into Emscripten virtual filesystem
+	target_link_libraries(${WEBGL_EXAMPLE} PRIVATE
+		"--preload-file ${CMAKE_CURRENT_SOURCE_DIR}/gltfloading_rmlui/data/@/examples/gltfloading_rmlui/data/"
+		"--preload-file ${CMAKE_SOURCE_DIR}/assets/@/assets/"
+		"--preload-file ${CMAKE_SOURCE_DIR}/external/RmlUi/Samples/assets/@/external/RmlUi/Samples/assets/"
+		"--preload-file ${CMAKE_SOURCE_DIR}/shaders/glsl/gltfloading_rmlui_webgl/@/shaders/glsl/gltfloading_rmlui_webgl/"
+	)
+endif()

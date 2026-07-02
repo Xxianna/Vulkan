@@ -177,7 +177,7 @@ endif()
 # ============================================================================
 # GLFW - Window/Input management (only needed for GLFW backends)
 # ============================================================================
-if(RMLUI_BACKEND MATCHES "^(BackwardCompatible_)?GLFW" AND NOT TARGET glfw)
+if(RMLUI_BACKEND MATCHES "^(BackwardCompatible_)?GLFW" AND NOT TARGET glfw AND NOT EMSCRIPTEN)
     option(GLFW_BUILD_DOCS "Build docs" OFF)
     option(GLFW_BUILD_EXAMPLES "Build examples" OFF)
     option(GLFW_BUILD_TESTS "Build tests" OFF)

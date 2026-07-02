@@ -246,3 +246,4 @@ libs/vulkan/*.so
 __pycache__**
 build_linux/
 .qwen/
+Build_WebGL/
