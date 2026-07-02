@@ -647,14 +647,18 @@ public:
 		render_interface->SetViewport(width, height);
 		render_interface->BeginFrame();
 
-		// GL3 backend binds its internal FBO in BeginFrame,
-		// rebind our FBO so UI renders into our texture
+		// Backend bound its internal FBO in BeginFrame.
+		// Rebind our FBO so UI renders into our texture.
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		context->Render();
 
-		// Skip EndFrame to prevent GL3 backend from compositing to default FB
+		// EndFrame resolves from backend's internal FBO (stale data)
+		// to default FB and cleans up internal resources.
+		// We don't care about its output — we composite ourselves.
+		render_interface->EndFrame();
+
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
@@ -981,7 +985,6 @@ public:
 		if (pendingClick) {
 			uint8_t rgba[4];
 			rmluiOverlay.readOffscreenPixel(pendingClickX, pendingClickY, rgba);
-			printf("[CLICK] button=%d pos=(%d,%d) alpha=%d\n", pendingClickButton, pendingClickX, pendingClickY, rgba[3]);
 			if (rgba[3] < 10) {
 				rmlui_passthrough = true;
 			} else {
