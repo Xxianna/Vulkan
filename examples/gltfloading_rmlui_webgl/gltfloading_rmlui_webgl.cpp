@@ -499,6 +499,13 @@ public:
 
 	void rotate(float dx, float dy) { rotationY += dx * 0.3f; rotationX += dy * 0.3f; }
 	void zoom(float delta) { distance -= delta * 0.5f; if (distance < 0.1f) distance = 0.1f; }
+	void translate(float dx, float dy)
+	{
+		float yaw = glm::radians(rotationY);
+		target.x -= dx * distance * 0.002f * cos(yaw);
+		target.z -= dx * distance * 0.002f * sin(yaw);
+		target.y += dy * distance * 0.002f;
+	}
 };
 
 // ============================================================================
@@ -722,6 +729,7 @@ public:
 	bool rmlui_passthrough = false;
 	bool running = true;
 	bool mouseDown = false;
+	bool middleMouseDown = false;
 	int lastMouseX = 0, lastMouseY = 0;
 
 	WebGLExample() : width(1280), height(720) {}
@@ -840,6 +848,9 @@ public:
 					}
 					mouseDown = true;
 					lastMouseX = mx; lastMouseY = my;
+				} else if (ev.button.button == SDL_BUTTON_MIDDLE) {
+					middleMouseDown = true;
+					lastMouseX = mx; lastMouseY = my;
 				}
 				break;
 			}
@@ -848,6 +859,8 @@ public:
 					rmlui_passthrough = false;
 					rmluiOverlay.processMouseButton(0, false);
 					mouseDown = false;
+				} else if (ev.button.button == SDL_BUTTON_MIDDLE) {
+					middleMouseDown = false;
 				}
 				break;
 			case SDL_MOUSEMOTION: {
@@ -856,6 +869,8 @@ public:
 					rmluiOverlay.processMouseMove(mx, my);
 				if (mouseDown && rmlui_passthrough)
 					camera.rotate(mx - lastMouseX, my - lastMouseY);
+				if (middleMouseDown)
+					camera.translate((float)(mx - lastMouseX), (float)(my - lastMouseY));
 				lastMouseX = mx; lastMouseY = my;
 				break;
 			}
