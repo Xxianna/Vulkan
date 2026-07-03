@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rml>
+<head>
+	<title>JoltPhysics Demo</title>
+	<style>
+body {
+	font-family: "HarmonyOS Sans SC";
+	font-size: 14dp;
+	color: #eee;
+	margin: 0; padding: 0;
+	width: 100%; height: 100%;
+	overflow: hidden;
+	background-color: transparent;
+}
+#info_panel {
+	position: absolute;
+	top: 10dp; left: 10dp;
+	width: 260dp;
+	padding: 12dp 16dp;
+	background-color: rgba(20, 20, 30, 200);
+	border: 1dp rgba(100, 140, 200, 180);
+	border-radius: 6dp;
+	z-index: 100;
+}
+#info_panel h2 {
+	font-size: 16dp;
+	font-weight: bold;
+	color: #8cf;
+	margin: 0 0 8dp 0;
+	padding: 0;
+}
+.stat-row {
+	display: flex;
+	justify-content: space-between;
+	padding: 3dp 0;
+	border-bottom: 1dp rgba(80, 80, 100, 100);
+}
+.stat-label { color: #aab; font-size: 13dp; }
+.stat-value { color: #fff; font-size: 13dp; font-weight: bold; }
+.stat-value.highlight { color: #f84; }
+#help_text {
+	position: absolute;
+	bottom: 10dp; left: 10dp;
+	padding: 8dp 12dp;
+	background-color: rgba(20, 20, 30, 160);
+	border-radius: 4dp;
+	font-size: 11dp;
+	color: #889;
+	z-index: 100;
+}
+#reset_bar {
+	width: 100%;
+	height: 4dp;
+	background-color: rgba(60, 60, 80, 200);
+	border-radius: 2dp;
+	margin-top: 6dp;
+	overflow: hidden;
+}
+#reset_fill {
+	height: 100%;
+	background-color: #4a8;
+	border-radius: 2dp;
+}
+	</style>
+</head>
+<body>
+
+<div id="info_panel" data-model="physics">
+	<h2>JoltPhysics Demo</h2>
+	<div class="stat-row">
+		<span class="stat-label">Bodies</span>
+		<span class="stat-value">{{ body_count }}</span>
+	</div>
+	<div class="stat-row">
+		<span class="stat-label">FPS</span>
+		<span class="stat-value">{{ fps }}</span>
+	</div>
+	<div class="stat-row">
+		<span class="stat-label">Reset #</span>
+		<span class="stat-value">{{ reset_count }}</span>
+	</div>
+	<div class="stat-row">
+		<span class="stat-label">Next Reset</span>
+		<span class="stat-value highlight">{{ reset_timer }}s</span>
+	</div>
+	<div id="reset_bar">
+		<div id="reset_fill" style="width: 100%;"></div>
+	</div>
+</div>
+
+<div id="help_text">
+	LMB drag: Rotate camera &nbsp;|&nbsp; Scroll: Zoom &nbsp;|&nbsp; R: Reset scene
+</div>
+
+</body>
+</rml>

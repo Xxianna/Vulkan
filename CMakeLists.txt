@@ -1,7 +1,7 @@
 # Copyright (C) 2016-2025 by Sascha Willems - www.saschawillems.de
 # This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 
-cmake_minimum_required(VERSION 3.10.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.20.0 FATAL_ERROR)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 set(NAME vulkanExamples)
@@ -211,16 +211,24 @@ add_subdirectory(external)
 set(RMLUI_USING_BUNDLED_DEPENDENCIES TRUE)
 add_subdirectory(external/RmlUi)
 
-# JoltPhysics (only when building for Emscripten/WebGL)
+# JoltPhysics
+set(TARGET_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(TARGET_HELLO_WORLD OFF CACHE BOOL "" FORCE)
+set(TARGET_PERFORMANCE_TEST OFF CACHE BOOL "" FORCE)
+set(TARGET_SAMPLES OFF CACHE BOOL "" FORCE)
+set(TARGET_VIEWER OFF CACHE BOOL "" FORCE)
+set(ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
 if(EMSCRIPTEN)
-	set(TARGET_UNIT_TESTS OFF CACHE BOOL "" FORCE)
-	set(TARGET_HELLO_WORLD OFF CACHE BOOL "" FORCE)
-	set(TARGET_PERFORMANCE_TEST OFF CACHE BOOL "" FORCE)
-	set(TARGET_SAMPLES OFF CACHE BOOL "" FORCE)
-	set(TARGET_VIEWER OFF CACHE BOOL "" FORCE)
-	set(ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
 	set(INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
-	add_subdirectory(external/JoltPhysics/Build)
+endif()
+# Ensure Jolt uses the same MSVC runtime (MD/DLL) as the rest of the project
+set(USE_STATIC_MSVC_RUNTIME_LIBRARY OFF CACHE BOOL "" FORCE)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+add_subdirectory(external/JoltPhysics/Build)
+
+# Suppress VS2026 Windows SDK warnings in JoltPhysics (system header warnings, not Jolt code)
+if(MSVC AND TARGET Jolt)
+	target_compile_options(Jolt PRIVATE /WX- /wd4865 /wd4668)
 endif()
 
 if(NOT EMSCRIPTEN)

@@ -130,6 +130,7 @@ set(EXAMPLES
 	inputattachments
 	instancing
 	inputevents
+	JoltPhysics_rmlui
 	meshshader
 	multisampling
 	multisamplingalphatocoverage
@@ -191,6 +192,12 @@ set(EXAMPLES
 
 if(NOT EMSCRIPTEN)
 	buildExamples()
+
+	# Link JoltPhysics to the JoltPhysics_rmlui example
+	if(TARGET JoltPhysics_rmlui)
+		target_include_directories(JoltPhysics_rmlui PRIVATE ${CMAKE_SOURCE_DIR}/external/JoltPhysics)
+		target_link_libraries(JoltPhysics_rmlui Jolt)
+	endif()
 endif()
 
 # ============================================================================
