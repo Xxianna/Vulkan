@@ -243,4 +243,48 @@ if(EMSCRIPTEN)
 		"--preload-file ${CMAKE_SOURCE_DIR}/external/RmlUi/Samples/assets/@/external/RmlUi/Samples/assets/"
 		"--preload-file ${CMAKE_SOURCE_DIR}/shaders/glsl/gltfloading_rmlui_webgl/@/shaders/glsl/gltfloading_rmlui_webgl/"
 	)
+
+	# ========================================================================
+	# JoltPhysics + RmlUi WebGL example
+	# ========================================================================
+	set(JOLT_WEBGL_EXAMPLE "JoltPhysics_rmlui_webgl")
+	set(JOLT_WEBGL_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/${JOLT_WEBGL_EXAMPLE}")
+
+	add_executable(${JOLT_WEBGL_EXAMPLE}
+		${JOLT_WEBGL_FOLDER}/${JOLT_WEBGL_EXAMPLE}.cpp
+		${RMLUI_GL3_BACKEND_DIR}/RmlUi_Renderer_GL3.cpp
+		${RMLUI_GL3_BACKEND_DIR}/RmlUi_Platform_SDL.cpp
+	)
+
+	target_include_directories(${JOLT_WEBGL_EXAMPLE} PRIVATE
+		${CMAKE_SOURCE_DIR}/external/RmlUi/Include
+		${CMAKE_SOURCE_DIR}/external/RmlUi/Backends
+		${CMAKE_SOURCE_DIR}/external/JoltPhysics
+		${CMAKE_SOURCE_DIR}/external/tinygltf
+		${CMAKE_SOURCE_DIR}/external/glm
+	)
+
+	target_compile_definitions(${JOLT_WEBGL_EXAMPLE} PRIVATE RMLUI_SDL_VERSION_MAJOR=2)
+
+	set_target_properties(${JOLT_WEBGL_EXAMPLE} PROPERTIES SUFFIX ".html")
+	target_compile_options(${JOLT_WEBGL_EXAMPLE} PRIVATE "-sUSE_SDL=2")
+	target_link_libraries(${JOLT_WEBGL_EXAMPLE} PRIVATE
+		rmlui_core
+		rmlui_debugger
+		Jolt
+		"-sUSE_SDL=2"
+		"-sASYNCIFY"
+		"-sALLOW_MEMORY_GROWTH"
+		"-sUSE_WEBGL2=1"
+		"-sFULL_ES3"
+	)
+	target_link_options(${JOLT_WEBGL_EXAMPLE} PRIVATE
+		"SHELL:--shell-file ${JOLT_WEBGL_FOLDER}/template.html"
+	)
+
+	# Preload RmlUi assets
+	target_link_libraries(${JOLT_WEBGL_EXAMPLE} PRIVATE
+		"--preload-file ${JOLT_WEBGL_FOLDER}/data/@/examples/JoltPhysics_rmlui_webgl/data/"
+		"--preload-file ${CMAKE_SOURCE_DIR}/external/RmlUi/Samples/assets/@/external/RmlUi/Samples/assets/"
+	)
 endif()
