@@ -679,6 +679,7 @@ public:
 		float dt = 1.0f / 60.0f;
 		physicsScene.step(frameTimer);
 		rmluiOverlay.update();
+		rmluiOverlay.render();
 
 		// FPS tracking
 		frameCount++;
