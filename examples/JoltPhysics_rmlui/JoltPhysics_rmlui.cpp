@@ -582,7 +582,9 @@ public:
 		}
 
 		Rml::ElementDocument* doc = rmluiOverlay.getContext()->LoadDocument(
-#ifdef VK_PROJECT_SOURCE_DIR
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+			"overlay.rml"
+#elif defined(VK_PROJECT_SOURCE_DIR)
 			VK_PROJECT_SOURCE_DIR "/examples/JoltPhysics_rmlui/data/overlay.rml"
 #else
 			"examples/JoltPhysics_rmlui/data/overlay.rml"

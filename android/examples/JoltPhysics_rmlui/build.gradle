@@ -1,0 +1,72 @@
+apply plugin: 'com.android.application'
+apply from: '../gradle/outputfilename.gradle'
+
+android {
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "de.saschawillems.vulkanjoltphysicsrmlui"
+        minSdkVersion 33
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        ndk {
+            abiFilters "arm64-v8a", "x86_64"
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++20"
+                def externalDir = new File(project.projectDir, '../../../external').absolutePath.replace('\\', '/')
+                arguments "-DANDROID_STL=c++_shared", '-DANDROID_TOOLCHAIN=clang', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON',
+                    "-DCMAKE_MODULE_PATH=${externalDir}"
+            }
+        }
+    }
+    sourceSets {
+        main.assets.srcDirs = ['assets']
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+}
+
+task copyTask {
+    copy {
+        from '../../common/res/drawable'
+        into "src/main/res/drawable"
+        include 'icon.png'
+    }
+
+    copy {
+        from rootProject.ext.shaderPath + 'glsl/base'
+        into 'assets/shaders/glsl/base'
+        include '*.spv'
+    }
+
+    copy {
+        from rootProject.ext.shaderPath + 'glsl/JoltPhysics_rmlui'
+        into 'assets/shaders/glsl/JoltPhysics_rmlui'
+        include '*.*'
+    }
+
+    copy {
+        from '../../../examples/JoltPhysics_rmlui/data'
+        into 'assets/overlay'
+        include '**/*'
+    }
+
+    copy {
+        from '../../../external/RmlUi/Samples/assets'
+        into 'assets/rmlui_assets'
+        include '**/*'
+    }
+}
+
+preBuild.dependsOn copyTask
