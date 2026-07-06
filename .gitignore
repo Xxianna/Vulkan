@@ -247,3 +247,4 @@ __pycache__**
 build_linux/
 .qwen/
 Build_WebGL/
+build_android_example.ini
