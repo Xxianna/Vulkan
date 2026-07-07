@@ -703,6 +703,14 @@ void RenderInterface_VK::BeginFrame()
 	vkCmdBeginRenderPass(m_p_current_command_buffer, &info_pass, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdSetViewport(m_p_current_command_buffer, 0, 1, &m_viewport);
 
+	// 重置 scissor 为全视口。scissor 是 Vulkan 动态状态，在部分驱动（尤其是 Android Adreno）上
+	// 会跨 command buffer 残留。若上一帧遗留了小 scissor（如 WidgetTextInput 为文本区域设置的裁剪），
+	// 而本帧没有元素重新设置 scissor，残留的小 scissor 会把后续元素裁剪为不可见。
+	m_scissor.offset = {0, 0};
+	m_scissor.extent = {static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)};
+	m_is_use_scissor_specified = false;
+	vkCmdSetScissor(m_p_current_command_buffer, 0, 1, &m_scissor);
+
 	m_is_apply_to_regular_geometry_stencil = false;
 }
 

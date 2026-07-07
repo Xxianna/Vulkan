@@ -615,3 +615,34 @@ See [CREDITS.md](CREDITS.md) for additional credits and attributions.
 ### 未提交改动
 
 - `README.md`：本记录
+
+---
+
+### 2026-07-07：RmlUi Vulkan 渲染器 scissor 跨帧残留导致 Android 真机 overlay 不显示
+
+**现象**：`JoltPhysics_rmlui` 示例在 Android 真机（Adreno GPU）上，删除 RML 中的 `<input type="text"/>` 元素后，整个 RmlUi overlay 不显示。Android 模拟器、Windows、WebGL 均正常。
+
+**根因**：Vulkan 的 `vkCmdSetScissor` 是动态状态，在 Adreno 驱动上会跨 command buffer 残留。
+
+1. `<input>` 的 `WidgetTextInput::OnRender()` 调用 `SetClippingRegion(text_element)`，把 scissor 设为文本区域大小（很小的矩形）
+2. 下一帧，body 没有 in-flow 子元素 → `GetClippingRegion()` 中 `has_clipping_content = false`（`GetClientHeight() >= GetScrollHeight()`）→ body 和 physics panel 都不设 scissor
+3. 整个帧没有任何 `vkCmdSetScissor` 调用 → GPU 沿用上一帧残留的小 scissor → physics panel 被裁剪为不可见
+4. 有 `<input>` 时：body 有 in-flow 子元素 → `has_clipping_content = true` → body 设 scissor 为全视口 → 覆盖残留值 → 正常
+
+**修复**：`RmlUi_Renderer_VK.cpp` 的 `BeginFrame()` 中，render pass 开始后无条件重置 scissor 为全视口：
+
+```cpp
+m_scissor.offset = {0, 0};
+m_scissor.extent = {static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)};
+m_is_use_scissor_specified = false;
+vkCmdSetScissor(m_p_current_command_buffer, 0, 1, &m_scissor);
+```
+
+**修改文件**：
+- `external/RmlUi/Backends/RmlUi_Renderer_VK.cpp`：`BeginFrame()` 加 scissor 重置
+- `examples/JoltPhysics_rmlui/data/overlay.rml`：删除 `<input>` 等不再需要的元素
+
+**排查经验**：
+- `printf` 在 Android 上不进 logcat，需用 `__android_log_print` 或 `LOGI`
+- 用二分法逐步去掉 CSS 属性定位到 `width: 100%` 是关键属性，最终锁定 `<input>` 的 `WidgetTextInput` 设 scissor 的行为
+- Windows/模拟器不受影响是因为 NVIDIA/Intel/SwiftShader 驱动在新 command buffer 时默认重置了动态状态

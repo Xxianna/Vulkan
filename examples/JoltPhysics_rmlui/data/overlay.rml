@@ -12,14 +12,9 @@ body {
 	overflow: hidden;
 	background-color: transparent;
 }
-#left_panel { position: absolute; top: 134dp; left: 0; bottom: 30dp; width: 180dp; overflow: hidden auto; z-index: 90; }
-.tree_search { padding: 4dp 6dp; }
-.tree_search input { width: 100%; box-sizing: border-box; font-size: 12dp; padding: 3dp 5dp; }
 	</style>
 </head>
 <body>
-
-<div class="tree_search"><input type="text"/></div>
 
 <div style="position:absolute; top:10dp; left:10dp; width:260dp; padding:12dp 16dp; background-color:rgba(20,20,30,200); border:1dp rgba(100,140,200,180); border-radius:6dp; z-index:100;" data-model="physics">
 	<h2 style="font-size:16dp; font-weight:bold; color:#8cf;">JoltPhysics Demo 搜索...</h2>
