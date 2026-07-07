@@ -5,3 +5,6 @@
 	path = assets
 	url = https://github.com/SaschaWillems/Vulkan-Assets
 	branch = main
+[submodule "external/JoltPhysics"]
+	path = external/JoltPhysics
+	url = https://github.com/jrouwe/JoltPhysics.git
